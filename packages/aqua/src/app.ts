@@ -102,8 +102,8 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use(express.json({ limit: '2mb' }));
-app.use(express.urlencoded({ extended: false, limit: '2mb' }));
+app.use(express.json({ limit: '15mb' }));
+app.use(express.urlencoded({ extended: false, limit: '15mb' }));
 
 if (!fs.existsSync(path.join(WEB_DIST_DIR, 'index.html'))) {
   logger.warn(`Frontend build not found at ${WEB_DIST_DIR} — run "npm run build" from the repo root.`);

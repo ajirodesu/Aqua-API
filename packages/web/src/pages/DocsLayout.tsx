@@ -17,6 +17,16 @@ export function DocsLayout() {
     setDrawerOpen(false);
   }, [location.pathname]);
 
+  // Jump the content pane back to the top on every navigation (e.g. docs
+  // overview -> an endpoint page). This is a plain, instant scrollTop reset
+  // — not an animated/smooth scroll — since scroll-behavior isn't set (and
+  // isn't inherited) on this element, only on <html> for in-page anchors.
+  useEffect(() => {
+    if (mainRef.current) {
+      mainRef.current.scrollTop = 0;
+    }
+  }, [location.pathname]);
+
   useEffect(() => {
     if (drawerOpen) {
       setDrawerMounted(true);
@@ -32,7 +42,7 @@ export function DocsLayout() {
 
       <div className="relative flex flex-1 overflow-hidden">
         {/* Desktop sidebar */}
-        <aside className="hidden w-72 shrink-0 border-r border-white/10 bg-white/[.02] lg:block">
+        <aside className="hidden w-72 shrink-0 border-r border-white/10 bg-white/[.02] lg:block xl:w-80">
           <Sidebar />
         </aside>
 
@@ -68,7 +78,7 @@ export function DocsLayout() {
               <p className="text-sm text-rose-400">Couldn't load the API catalog: {error}</p>
             </div>
           ) : (
-            <div className="mx-auto max-w-4xl px-5 py-8 pb-[calc(env(safe-area-inset-bottom)+2rem)] sm:px-8">
+            <div className="mx-auto max-w-4xl px-5 py-8 pb-[calc(env(safe-area-inset-bottom)+2rem)] sm:px-8 xl:max-w-5xl xl:px-10 2xl:max-w-6xl">
               <Outlet />
             </div>
           )}

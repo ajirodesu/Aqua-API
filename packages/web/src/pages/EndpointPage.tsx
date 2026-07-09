@@ -32,11 +32,7 @@ export function EndpointPage() {
 
   useEffect(() => {
     setMethod(endpoint?.methods[0] ?? 'GET');
-    const initial: Record<string, string> = {};
-    (endpoint?.params ?? []).forEach((p) => {
-      if (p.example !== undefined) initial[p.name] = String(p.example);
-    });
-    setValues(initial);
+    setValues({});
     setResult(null);
     setCurlOpen(false);
   }, [endpoint?.path]);
@@ -100,7 +96,7 @@ export function EndpointPage() {
         className="inline-flex items-center gap-1 text-[13px] font-medium text-slate-500 transition-colors hover:text-slate-200"
       >
         <ChevronLeft className="h-3.5 w-3.5" />
-        All endpoints
+        Back to Dashboard
       </Link>
 
       <div>
@@ -124,8 +120,8 @@ export function EndpointPage() {
         </button>
       </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <div className="card p-5">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] xl:gap-8">
+        <div className="card p-5 xl:p-6">
           {endpoint.methods.length > 1 && (
             <div className="mb-4 inline-flex rounded-full bg-white/5 p-0.5 text-[13px] font-semibold">
               {endpoint.methods.map((m) => (

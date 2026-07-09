@@ -25,11 +25,13 @@ export function ParamField({ param, value, onChange, method }: Props) {
   const type = param.type ?? (param.options?.length ? 'select' : 'text');
   const inputRef = useRef<HTMLInputElement>(null);
   const [fileName, setFileName] = useState<string>('');
-  const [mode, setMode] = useState<'url' | 'upload'>('url');
 
   const isMedia = MEDIA_TYPES.has(type);
   const canUpload = UPLOAD_METHODS.has(method.toUpperCase());
-  const isUploadWidget = isMedia && canUpload && mode === 'upload';
+  // Media params under POST/PUT go straight to the upload widget — no
+  // URL-input fallback for attachments on write methods. Plain text params
+  // are unaffected and keep their normal text input regardless of method.
+  const isUploadWidget = isMedia && canUpload;
 
   // "Use example" shows for every field that takes a typed/pasted value —
   // as long as an example was provided — regardless of whether the value
@@ -86,30 +88,7 @@ export function ParamField({ param, value, onChange, method }: Props) {
         />
       ) : isMedia ? (
         <div>
-          {canUpload && (
-            <div className="mb-2 inline-flex rounded-full bg-white/5 p-0.5 text-[12px] font-semibold">
-              <button
-                type="button"
-                onClick={() => setMode('url')}
-                className={`rounded-full px-3 py-1 transition-colors duration-200 ${
-                  mode === 'url' ? 'bg-surface-card text-white shadow-ios-sm' : 'text-slate-400'
-                }`}
-              >
-                URL
-              </button>
-              <button
-                type="button"
-                onClick={() => setMode('upload')}
-                className={`rounded-full px-3 py-1 transition-colors duration-200 ${
-                  mode === 'upload' ? 'bg-surface-card text-white shadow-ios-sm' : 'text-slate-400'
-                }`}
-              >
-                Upload
-              </button>
-            </div>
-          )}
-
-          {(!canUpload || mode === 'url') ? (
+          {!canUpload ? (
             <input
               value={value.startsWith('data:') ? '' : value}
               onChange={(e) => onChange(e.target.value)}

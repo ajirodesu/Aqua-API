@@ -85,7 +85,7 @@ export function ResponseConsole({ result }: { result: ExecuteResult | null }) {
         </div>
       </div>
 
-      <div className="max-h-[420px] overflow-auto p-4">
+      <div className="max-h-[420px] overflow-auto p-4 xl:max-h-[560px] xl:p-5">
         {result.blobUrl ? (
           result.contentType.startsWith('image/') ? (
             <img src={result.blobUrl} alt="Response" className="mx-auto max-h-96 rounded-lg" />

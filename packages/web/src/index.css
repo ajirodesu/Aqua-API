@@ -13,6 +13,10 @@
     height: 100%;
   }
 
+  html {
+    scroll-behavior: smooth;
+  }
+
   body {
     @apply bg-surface text-slate-100;
   }

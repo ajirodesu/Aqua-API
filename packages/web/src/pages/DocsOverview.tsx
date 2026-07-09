@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   AlertTriangle,
@@ -46,13 +46,23 @@ export function DocsOverview() {
   const [copiedBase, setCopiedBase] = useState(false);
   const [copiedExample, setCopiedExample] = useState(false);
 
-  const exampleBucket = buckets.find((b) => b.items.length > 0);
-  const exampleEndpoint = exampleBucket?.items[0];
+  // Pick a random endpoint (across every category) to showcase, rather than
+  // always the first item of the first bucket. Re-rolled once per mount —
+  // memoized off `buckets` so it doesn't reshuffle on every re-render (e.g.
+  // when the "Copied" state toggles).
+  const allEndpoints = useMemo(() => buckets.flatMap((b) => b.items), [buckets]);
+  const exampleEndpoint = useMemo(() => {
+    if (allEndpoints.length === 0) return undefined;
+    return allEndpoints[Math.floor(Math.random() * allEndpoints.length)];
+  }, [allEndpoints]);
   const baseUrl = API_ORIGIN || (typeof window !== 'undefined' ? window.location.origin : '');
   const exampleUrl = exampleEndpoint ? endpointUrl(exampleEndpoint.path) : '';
   const exampleHref = exampleEndpoint
     ? `/docs/${slugify(exampleEndpoint.category)}/${slugify(exampleEndpoint.name)}`
     : '/docs';
+
+  const gif = config?.header.imageSrc?.[0];
+  const size = config?.header.imageSize;
 
   function copy(text: string, mark: (v: boolean) => void) {
     navigator.clipboard.writeText(text);
@@ -62,16 +72,17 @@ export function DocsOverview() {
 
   return (
     <div className="animate-fade-up space-y-10">
+      {size && (
+        <style>{`
+          .docs-hero-gif { width: ${size.mobile}; }
+          @media (min-width: 640px) { .docs-hero-gif { width: ${size.tablet}; } }
+          @media (min-width: 1024px) { .docs-hero-gif { width: ${size.desktop}; } }
+        `}</style>
+      )}
+
       {/* HERO */}
-      <div className="card flex flex-col items-center gap-4 overflow-hidden p-6 text-center sm:flex-row sm:text-left">
-        {config?.header.imageSrc?.[0] && (
-          <img
-            src={config.header.imageSrc[0]}
-            alt=""
-            className="h-20 w-20 shrink-0 rounded-2xl object-cover shadow-ios-sm"
-            loading="lazy"
-          />
-        )}
+      <div className="flex flex-col items-center gap-4 text-center sm:flex-row sm:text-left">
+        {gif && <img src={gif} alt="" className="docs-hero-gif shrink-0 rounded-2xl" loading="lazy" />}
         <div>
           <h1 className="font-display text-2xl font-extrabold tracking-tight text-white">
             {config?.name ?? 'Aqua APIs'}

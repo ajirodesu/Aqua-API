@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   ArrowRight,
@@ -6,6 +7,10 @@ import {
   Code2,
   Facebook,
   Github,
+  Layers,
+  Menu,
+  Rocket,
+  ScrollText,
   Send,
   ShieldCheck,
   Sparkles,
@@ -15,6 +20,7 @@ import {
 } from 'lucide-react';
 import { useAppData } from '../lib/appData';
 import { useScrolled } from '../lib/useScrolled';
+import { NotificationBell } from '../components/NotificationBell';
 
 const FEATURES = [
   {
@@ -59,16 +65,36 @@ const TERMS = [
 
 const CTA_CHECKS = ['No Auth', '100% Free', 'JSON Responses', 'Always Online'];
 
+// Sections the hamburger menu can jump to, in page order.
+const SECTION_LINKS = [
+  { href: '#features', label: 'Features', icon: Sparkles },
+  { href: '#getting-started', label: 'Getting Started', icon: Layers },
+  { href: '#terms', label: 'Terms of Service', icon: ScrollText },
+  { href: '#cta', label: 'Start Building', icon: Rocket },
+];
+
 export function Home() {
   const { config, totalEndpoints, buckets, loading } = useAppData();
   const year = new Date().getFullYear();
-  const scrolled = useScrolled();
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const scrolled = useScrolled(scrollRef);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [drawerMounted, setDrawerMounted] = useState(false);
+
+  useEffect(() => {
+    if (drawerOpen) {
+      setDrawerMounted(true);
+    } else if (drawerMounted) {
+      const t = setTimeout(() => setDrawerMounted(false), 300);
+      return () => clearTimeout(t);
+    }
+  }, [drawerOpen, drawerMounted]);
 
   const gif = config?.header.imageSrc?.[0];
   const size = config?.header.imageSize;
 
   return (
-    <div className="flex min-h-[100dvh] flex-col overflow-x-hidden bg-surface">
+    <div className="flex h-[100dvh] flex-col overflow-hidden bg-surface">
       {size && (
         <style>{`
           .hero-gif { width: ${size.mobile}; }
@@ -77,49 +103,114 @@ export function Home() {
         `}</style>
       )}
 
+      {/* HEADER — same height/style/behavior as the docs TopBar, but the
+          hamburger opens a menu for this page's own sections + a Docs link,
+          since the landing page has no persistent sidebar of its own. */}
       <header
-        className={`sticky top-0 z-20 flex items-center justify-between px-5 py-3 transition-all duration-300 ease-ios sm:px-8 ${
-          scrolled ? 'glass border-b' : 'border-b border-transparent bg-transparent'
+        className={`sticky top-0 z-20 flex h-14 shrink-0 items-center gap-2 px-3 transition-all duration-300 ease-ios sm:px-5 ${
+          scrolled ? 'glass border-b' : 'border-b border-transparent bg-surface'
         }`}
       >
-        <div
-          className={`flex items-center gap-2 font-display font-extrabold text-white transition-opacity duration-300 ease-ios ${
-            scrolled ? 'opacity-100' : 'pointer-events-none opacity-0'
-          }`}
+        <button
+          type="button"
+          onClick={() => setDrawerOpen((o) => !o)}
+          className="relative z-10 flex h-9 w-9 items-center justify-center rounded-full text-slate-300 transition-colors duration-200 hover:bg-white/10 active:scale-90"
+          aria-label="Toggle navigation menu"
         >
-          {config?.name ?? 'Aqua APIs'}
-        </div>
-        <div
-          className={`flex items-center gap-1.5 transition-opacity duration-300 ease-ios ${
-            scrolled ? 'opacity-100' : 'pointer-events-none opacity-0'
-          }`}
-        >
-          {config?.github && (
-            <a
-              href={config.github}
-              target="_blank"
-              rel="noreferrer"
+          <Menu className="h-5 w-5" strokeWidth={2.2} />
+        </button>
 
-              className="flex h-9 w-9 items-center justify-center rounded-full text-slate-300 transition-colors duration-200 hover:bg-white/10"
-              aria-label="GitHub"
-            >
-              <Github className="h-[18px] w-[18px]" />
-            </a>
-          )}
-          <Link to="/docs" className="btn-secondary !px-4 !py-2 text-[13px]">
-            <BookOpen className="h-3.5 w-3.5" />
-            Docs
-          </Link>
+        <Link
+          to="/"
+          className={`absolute left-1/2 flex -translate-x-1/2 items-center gap-2 font-display font-extrabold text-white transition-opacity duration-300 ease-ios lg:static lg:left-auto lg:translate-x-0 ${
+            scrolled ? 'opacity-100' : 'pointer-events-none opacity-0'
+          }`}
+        >
+          <span className="text-[15px]">{config?.name ?? 'Aqua APIs'}</span>
+        </Link>
+
+        <div className="relative z-10 ml-auto flex items-center gap-1.5">
+          <div
+            className={`flex items-center gap-1.5 transition-opacity duration-300 ease-ios ${
+              scrolled ? 'opacity-100' : 'pointer-events-none opacity-0'
+            }`}
+          >
+            {config?.github && (
+              <a
+                href={config.github}
+                target="_blank"
+                rel="noreferrer"
+                className="hidden h-9 w-9 items-center justify-center rounded-full text-slate-300 transition-colors duration-200 hover:bg-white/10 sm:flex"
+                aria-label="GitHub"
+              >
+                <Github className="h-[17px] w-[17px]" />
+              </a>
+            )}
+            <Link to="/docs" className="btn-secondary hidden !px-4 !py-2 text-[13px] sm:inline-flex">
+              <BookOpen className="h-3.5 w-3.5" />
+              Docs
+            </Link>
+          </div>
+          <NotificationBell />
         </div>
       </header>
 
+      {/* NAV DRAWER — jumps to this page's sections, or over to the docs. */}
+      {drawerMounted && (
+        <div className="fixed inset-0 z-40">
+          <div
+            className={`absolute inset-0 bg-black/50 backdrop-blur-sm transition-opacity duration-300 ease-ios ${
+              drawerOpen ? 'opacity-100' : 'opacity-0'
+            }`}
+            onClick={() => setDrawerOpen(false)}
+          />
+          <div
+            className={`glass absolute inset-y-0 left-0 flex w-[85%] max-w-xs flex-col shadow-ios-lg transition-transform duration-300 ease-ios ${
+              drawerOpen ? 'translate-x-0' : '-translate-x-full'
+            }`}
+          >
+            <div className="flex h-14 shrink-0 items-center border-b border-white/10 px-4 font-display font-extrabold text-white">
+              {config?.name ?? 'Aqua APIs'}
+            </div>
+            <nav className="flex-1 space-y-1 overflow-y-auto p-3">
+              {SECTION_LINKS.map((s) => (
+                <a
+                  key={s.href}
+                  href={s.href}
+                  onClick={() => setDrawerOpen(false)}
+                  className="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-[13.5px] font-medium text-slate-300 transition-colors hover:bg-white/5"
+                >
+                  <s.icon className="h-4 w-4 text-aqua-400" strokeWidth={2} />
+                  {s.label}
+                </a>
+              ))}
+            </nav>
+            <div className="border-t border-white/10 p-3">
+              <Link
+                to="/docs"
+                onClick={() => setDrawerOpen(false)}
+                className="btn-primary w-full !py-2.5 text-[13.5px]"
+              >
+                <BookOpen className="h-4 w-4" />
+                Go to Docs
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Scrollable body — kept in its own overflow-y-auto region (mirroring
+          the docs/dashboard shell) so that when the nav drawer is open, the
+          backdrop fully owns scroll/touch input and the page behind it
+          can't be scrolled. */}
+      <div ref={scrollRef} className="flex-1 overflow-y-auto overscroll-contain">
       <main className="flex-1">
         {/* HERO */}
         <section className="relative overflow-hidden">
           <div className="pointer-events-none absolute -left-32 -top-32 h-[32rem] w-[32rem] rounded-full bg-aqua-400/15 blur-[120px]" />
           <div className="pointer-events-none absolute -bottom-40 right-0 h-[28rem] w-[28rem] rounded-full bg-aqua-600/10 blur-[130px]" />
 
-          <div className="relative mx-auto flex max-w-5xl flex-col items-center px-6 py-20 text-center">
+          <div className="relative mx-auto flex max-w-5xl flex-col items-center px-6 py-20 text-center lg:max-w-6xl lg:py-28">
           {gif && (
             <img
               src={gif}
@@ -134,7 +225,7 @@ export function Home() {
             {config?.header.status ?? 'Online • Always Free'}
           </span>
 
-          <h1 className="animate-fade-up font-display text-4xl font-extrabold leading-[1.05] tracking-tight text-white sm:text-6xl">
+          <h1 className="animate-fade-up font-display text-4xl font-extrabold leading-[1.05] tracking-tight text-white sm:text-6xl lg:text-7xl">
             Welcome to {config?.name ?? 'Aqua APIs'}
           </h1>
           <p
@@ -145,7 +236,7 @@ export function Home() {
           </p>
 
           <div
-            className="mt-8 flex animate-fade-up items-stretch gap-2 rounded-2xl border border-white/10 bg-white/[.03] px-6 py-4 sm:gap-8"
+            className="mt-8 flex animate-fade-up items-stretch gap-2 px-6 py-4 sm:gap-8"
             style={{ animationDelay: '120ms' }}
           >
             <div className="flex flex-col px-2">
@@ -181,14 +272,14 @@ export function Home() {
         </section>
 
         {/* FEATURES */}
-        <section id="features" className="mx-auto max-w-5xl px-6 py-14 scroll-mt-16">
+        <section id="features" className="mx-auto max-w-5xl scroll-mt-16 px-6 py-14 lg:max-w-6xl lg:py-20">
           <p className="text-center text-[12px] font-bold uppercase tracking-widest text-aqua-400">Capabilities</p>
           <h2 className="mt-2 text-center font-display text-2xl font-extrabold text-white sm:text-3xl">
             Key Features
           </h2>
-          <div className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <div className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-3 lg:gap-6">
             {FEATURES.map((f) => (
-              <div key={f.name} className="card animate-fade-up p-6 transition duration-200 ease-ios hover:-translate-y-1 hover:shadow-ios-md">
+              <div key={f.name} className="card animate-fade-up p-6 transition duration-200 ease-ios hover:-translate-y-1 hover:shadow-ios-md lg:p-7">
                 <span className="grid h-11 w-11 place-items-center rounded-xl bg-aqua-500/10 text-aqua-400">
                   <f.icon className="h-5 w-5" strokeWidth={2} />
                 </span>
@@ -199,15 +290,15 @@ export function Home() {
           </div>
         </section>
 
-        <div className="mx-auto h-px max-w-5xl bg-white/10" />
+        <div className="mx-auto h-px max-w-5xl bg-white/10 lg:max-w-6xl" />
 
         {/* GETTING STARTED */}
-        <section className="mx-auto max-w-5xl px-6 py-14">
+        <section id="getting-started" className="mx-auto max-w-5xl scroll-mt-16 px-6 py-14 lg:max-w-6xl lg:py-20">
           <p className="text-center text-[12px] font-bold uppercase tracking-widest text-aqua-400">Quickstart</p>
           <h2 className="mt-2 text-center font-display text-2xl font-extrabold text-white sm:text-3xl">
             Getting Started
           </h2>
-          <div className="mt-10 grid grid-cols-1 gap-6 sm:grid-cols-3">
+          <div className="mt-10 grid grid-cols-1 gap-6 sm:grid-cols-3 lg:gap-8">
             {STEPS.map((step, i) => (
               <div key={step.title} className="flex flex-col items-center text-center sm:items-start sm:text-left">
                 <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-aqua-500/15 text-[14px] font-bold text-aqua-300">
@@ -220,10 +311,10 @@ export function Home() {
           </div>
         </section>
 
-        <div className="mx-auto h-px max-w-5xl bg-white/10" />
+        <div className="mx-auto h-px max-w-5xl bg-white/10 lg:max-w-6xl" />
 
         {/* TERMS */}
-        <section className="mx-auto max-w-5xl px-6 py-14">
+        <section id="terms" className="mx-auto max-w-5xl scroll-mt-16 px-6 py-14 lg:max-w-6xl lg:py-20">
           <p className="text-center text-[12px] font-bold uppercase tracking-widest text-aqua-400">Legal</p>
           <h2 className="mt-2 text-center font-display text-2xl font-extrabold text-white sm:text-3xl">
             Terms of Service
@@ -253,10 +344,10 @@ export function Home() {
           </div>
         </section>
 
-        <div className="mx-auto h-px max-w-5xl bg-white/10" />
+        <div className="mx-auto h-px max-w-5xl bg-white/10 lg:max-w-6xl" />
 
         {/* CTA */}
-        <section className="mx-auto max-w-5xl px-6 py-14">
+        <section id="cta" className="mx-auto max-w-5xl scroll-mt-16 px-6 py-14 lg:max-w-6xl lg:py-20">
           <div className="card overflow-hidden">
             <div className="p-8 sm:p-10">
               <div className="flex items-center gap-2 text-[12px] font-semibold text-emerald-400">
@@ -291,7 +382,7 @@ export function Home() {
       </main>
 
       <footer className="relative z-10 border-t border-white/10 bg-white/[.02] pb-[calc(env(safe-area-inset-bottom)+1.5rem)] pt-10">
-        <div className="mx-auto grid max-w-5xl grid-cols-1 gap-8 px-6 sm:grid-cols-2">
+        <div className="mx-auto grid max-w-5xl grid-cols-1 gap-8 px-6 sm:grid-cols-2 lg:max-w-6xl">
           <div>
             <h3 className="text-[13px] font-bold uppercase tracking-wide text-slate-300">About</h3>
             <p className="mt-2 max-w-sm text-[13px] leading-relaxed text-slate-500">
@@ -341,6 +432,7 @@ export function Home() {
           © {year} {config?.name ?? 'API'}. All rights reserved. Built by {config?.operator ?? 'AjiroDesu'}.
         </p>
       </footer>
+      </div>
     </div>
   );
 }
