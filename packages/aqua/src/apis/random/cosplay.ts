@@ -3,7 +3,7 @@ import type { ApiHandler, ApiMeta } from '../../types.js';
 import { logger } from '../../logger.js';
 
 export const meta: ApiMeta = {
-  name: 'cosplay',
+  name: 'Cosplay',
   desc: 'Get a random cosplay video',
   method: 'get',
   category: 'random',

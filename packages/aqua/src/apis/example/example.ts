@@ -1,7 +1,7 @@
 import type { ApiHandler, ApiMeta } from '../../types.js';
 
 export const meta: ApiMeta = {
-  name: 'example',
+  name: 'Example',
   desc: 'A simple example API that echoes back the input text with a greeting',
   method: ['get', 'post'],
   category: 'example',

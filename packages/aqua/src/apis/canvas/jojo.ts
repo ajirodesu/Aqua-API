@@ -2,7 +2,7 @@ import { createCanvas, loadImage } from '@napi-rs/canvas';
 import type { ApiHandler, ApiMeta } from '../../types.js';
 
 export const meta: ApiMeta = {
-  name: 'jojo',
+  name: 'Jojo',
   desc: 'Generate a JoJo meme image with an overlay image',
   method: ['get', 'post'],
   category: 'canvas',

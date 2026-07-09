@@ -2,7 +2,7 @@ import axios from 'axios';
 import type { ApiHandler, ApiMeta } from '../../types.js';
 
 export const meta: ApiMeta = {
-  name: 'blue archive',
+  name: 'Blue Archive',
   desc: 'Blue Archive random image',
   method: 'get',
   category: 'random',
