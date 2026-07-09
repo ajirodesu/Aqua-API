@@ -1,0 +1,97 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    @apply bg-surface-darkbase text-slate-100;
+  }
+
+  * {
+    @apply border-white/10;
+  }
+
+  ::selection {
+    @apply bg-aqua-400/30;
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: transparent;
+    @apply rounded-full;
+  }
+  *:hover::-webkit-scrollbar-thumb {
+    @apply bg-white/15;
+  }
+
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
+  }
+  *:hover {
+    scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+  }
+
+  :focus-visible {
+    outline: 2px solid theme('colors.aqua.500');
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+}
+
+@layer components {
+  /* iOS-style frosted glass surface, used for the sidebar and top bar */
+  .glass {
+    @apply bg-surface-darkcard/60 backdrop-blur-xl backdrop-saturate-150 border border-white/10;
+  }
+
+  /* Material-style elevated card */
+  .card {
+    @apply bg-surface-darkcard rounded-2xl border border-white/10 shadow-none;
+  }
+
+  .pill {
+    @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold tracking-wide;
+  }
+
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-full bg-aqua-500 px-5 py-2.5 text-sm font-semibold text-white shadow-glow-aqua transition-all duration-200 ease-ios hover:bg-aqua-600 active:scale-[0.97] disabled:opacity-40 disabled:pointer-events-none;
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 rounded-full bg-white/5 px-5 py-2.5 text-sm font-semibold text-slate-200 transition-all duration-200 ease-ios hover:bg-white/10 active:scale-[0.97];
+  }
+
+  .input-field {
+    @apply w-full rounded-xl border border-white/10 bg-white/5 px-3.5 py-2.5 text-sm text-slate-100 placeholder:text-slate-500 transition focus:border-aqua-400 focus:ring-4 focus:ring-aqua-400/15;
+  }
+
+  .method-badge-GET {
+    @apply bg-emerald-500/10 text-emerald-400;
+  }
+  .method-badge-POST {
+    @apply bg-aqua-500/10 text-aqua-300;
+  }
+  .method-badge-PUT {
+    @apply bg-amber-500/10 text-amber-400;
+  }
+  .method-badge-DELETE {
+    @apply bg-rose-500/10 text-rose-400;
+  }
+}

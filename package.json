@@ -1,0 +1,17 @@
+{
+  "name": "aqua-monorepo",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev -w aqua",
+    "dev:web": "npm run dev -w web",
+    "build": "npm run build -w web && npm run build -w aqua",
+    "start": "npm run start -w aqua",
+    "aqua": "npm run dev -w aqua",
+    "web": "npm run dev -w web"
+  }
+}
