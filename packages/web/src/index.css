@@ -14,7 +14,7 @@
   }
 
   body {
-    @apply bg-surface-darkbase text-slate-100;
+    @apply bg-surface text-slate-100;
   }
 
   * {
@@ -26,26 +26,29 @@
   }
 
   ::-webkit-scrollbar {
-    width: 10px;
-    height: 10px;
+    width: 8px;
+    height: 8px;
   }
   ::-webkit-scrollbar-track {
     background: transparent;
   }
   ::-webkit-scrollbar-thumb {
-    background: transparent;
-    @apply rounded-full;
+    background-color: transparent;
+    border-radius: 9999px;
+    transition: background-color 0.25s ease;
   }
-  *:hover::-webkit-scrollbar-thumb {
-    @apply bg-white/15;
+  /* Scrollbar thumb is invisible until the element is actively being
+     scrolled (class toggled briefly by the global listener in main.tsx),
+     so it never sits on screen as visual clutter. */
+  .scrolling::-webkit-scrollbar-thumb {
+    background-color: rgba(255, 255, 255, 0.22);
   }
-
   * {
     scrollbar-width: thin;
     scrollbar-color: transparent transparent;
   }
-  *:hover {
-    scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+  .scrolling {
+    scrollbar-color: rgba(255, 255, 255, 0.22) transparent;
   }
 
   :focus-visible {
@@ -58,12 +61,12 @@
 @layer components {
   /* iOS-style frosted glass surface, used for the sidebar and top bar */
   .glass {
-    @apply bg-surface-darkcard/60 backdrop-blur-xl backdrop-saturate-150 border border-white/10;
+    @apply bg-surface-card/60 backdrop-blur-xl backdrop-saturate-150 border border-white/10;
   }
 
   /* Material-style elevated card */
   .card {
-    @apply bg-surface-darkcard rounded-2xl border border-white/10 shadow-none;
+    @apply bg-surface-card rounded-2xl border border-white/10 shadow-ios-sm;
   }
 
   .pill {

@@ -1,8 +1,19 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import tailwindcss from 'tailwindcss';
+import autoprefixer from 'autoprefixer';
+import tailwindConfig from './tailwind.config';
 
+// PostCSS plugins are configured inline here (rather than in a separate
+// postcss.config.*) so the whole frontend toolchain — including build
+// config — stays TypeScript, with no CJS/ESM loader conflicts.
 export default defineConfig({
   plugins: [react()],
+  css: {
+    postcss: {
+      plugins: [tailwindcss(tailwindConfig), autoprefixer()],
+    },
+  },
   server: {
     port: 5173,
     proxy: {

@@ -17,6 +17,7 @@ export function NotificationBell() {
   const { config } = useAppData();
   const notifications = config?.notification ?? [];
   const [open, setOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -27,6 +28,15 @@ export function NotificationBell() {
     return () => document.removeEventListener('mousedown', onClick);
   }, []);
 
+  useEffect(() => {
+    if (open) {
+      setMounted(true);
+    } else if (mounted) {
+      const t = setTimeout(() => setMounted(false), 180);
+      return () => clearTimeout(t);
+    }
+  }, [open, mounted]);
+
   return (
     <div className="relative" ref={ref}>
       <button
@@ -34,7 +44,7 @@ export function NotificationBell() {
         onClick={() => setOpen((o) => !o)}
         aria-label="Notifications"
         aria-expanded={open}
-        className="relative flex h-9 w-9 items-center justify-center rounded-full text-slate-300 transition-colors hover:bg-white/10"
+        className="relative flex h-9 w-9 items-center justify-center rounded-full text-slate-300 transition-colors duration-200 hover:bg-white/10 active:scale-90"
       >
         <Bell className="h-[18px] w-[18px]" strokeWidth={2.2} />
         {notifications.length > 0 && (
@@ -45,11 +55,15 @@ export function NotificationBell() {
         )}
       </button>
 
-      {open && (
-        <div className="absolute right-0 top-11 z-30 w-80 rounded-2xl border border-white/10 bg-surface-darkcard p-2 shadow-ios-lg animate-fade-up">
+      {mounted && (
+        <div
+          className={`absolute right-0 top-11 z-30 w-80 origin-top-right rounded-2xl border border-white/10 bg-surface-card p-2 shadow-ios-lg transition-all duration-200 ease-ios ${
+            open ? 'scale-100 opacity-100' : 'pointer-events-none scale-95 opacity-0'
+          }`}
+        >
           <div className="flex items-center justify-between px-2 py-1.5">
             <span className="text-sm font-bold text-slate-200">Notifications</span>
-            <span className="text-xs text-slate-400">
+            <span className="text-xs text-slate-500">
               {notifications.length > 0 ? `${notifications.length} total` : 'all caught up'}
             </span>
           </div>
@@ -57,25 +71,18 @@ export function NotificationBell() {
             {notifications.length === 0 ? (
               <div className="flex flex-col items-center gap-2 px-4 py-8 text-center">
                 <BellOff className="h-6 w-6 text-slate-600" />
-                <span className="text-xs text-slate-400">No notifications yet.</span>
+                <span className="text-xs text-slate-500">No notifications yet.</span>
               </div>
             ) : (
               [...notifications]
                 .sort((a, b) => b.createdAt - a.createdAt)
                 .map((n) => (
-                  <div
-                    key={n.id}
-                    className="rounded-xl px-3 py-2.5 transition-colors hover:bg-white/5"
-                  >
+                  <div key={n.id} className="rounded-xl px-3 py-2.5 transition-colors duration-200 hover:bg-white/5">
                     <div className="flex items-center justify-between gap-2">
-                      <span className="text-[13px] font-semibold text-slate-200">
-                        {n.title || 'Update'}
-                      </span>
-                      <span className="shrink-0 text-[11px] text-slate-400">{timeAgo(n.createdAt)}</span>
+                      <span className="text-[13px] font-semibold text-slate-200">{n.title || 'Update'}</span>
+                      <span className="shrink-0 text-[11px] text-slate-500">{timeAgo(n.createdAt)}</span>
                     </div>
-                    <p className="mt-0.5 text-[13px] leading-snug text-slate-400">
-                      {n.message}
-                    </p>
+                    <p className="mt-0.5 text-[13px] leading-snug text-slate-400">{n.message}</p>
                   </div>
                 ))
             )}

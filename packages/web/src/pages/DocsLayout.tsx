@@ -1,21 +1,34 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { Sidebar } from '../components/Sidebar';
 import { TopBar } from '../components/TopBar';
 import { useAppData } from '../lib/appData';
+import { useScrolled } from '../lib/useScrolled';
 
 export function DocsLayout() {
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [drawerMounted, setDrawerMounted] = useState(false);
   const location = useLocation();
   const { loading, error } = useAppData();
+  const mainRef = useRef<HTMLElement>(null);
+  const scrolled = useScrolled(mainRef);
 
   useEffect(() => {
     setDrawerOpen(false);
   }, [location.pathname]);
 
+  useEffect(() => {
+    if (drawerOpen) {
+      setDrawerMounted(true);
+    } else if (drawerMounted) {
+      const t = setTimeout(() => setDrawerMounted(false), 300);
+      return () => clearTimeout(t);
+    }
+  }, [drawerOpen, drawerMounted]);
+
   return (
-    <div className="flex h-screen flex-col overflow-hidden">
-      <TopBar onMenuClick={() => setDrawerOpen((o) => !o)} />
+    <div className="flex h-[100dvh] flex-col overflow-hidden bg-surface">
+      <TopBar onMenuClick={() => setDrawerOpen((o) => !o)} scrolled={scrolled} />
 
       <div className="relative flex flex-1 overflow-hidden">
         {/* Desktop sidebar */}
@@ -24,19 +37,25 @@ export function DocsLayout() {
         </aside>
 
         {/* Mobile drawer */}
-        {drawerOpen && (
+        {drawerMounted && (
           <div className="fixed inset-0 z-40 lg:hidden">
             <div
-              className="absolute inset-0 bg-slate-950/60 backdrop-blur-sm animate-fade-up"
+              className={`absolute inset-0 bg-black/50 backdrop-blur-sm transition-opacity duration-300 ease-ios ${
+                drawerOpen ? 'opacity-100' : 'opacity-0'
+              }`}
               onClick={() => setDrawerOpen(false)}
             />
-            <div className="glass absolute inset-y-0 left-0 w-[85%] max-w-xs shadow-ios-lg">
+            <div
+              className={`glass absolute inset-y-0 left-0 w-[85%] max-w-xs shadow-ios-lg transition-transform duration-300 ease-ios ${
+                drawerOpen ? 'translate-x-0' : '-translate-x-full'
+              }`}
+            >
               <Sidebar onNavigate={() => setDrawerOpen(false)} />
             </div>
           </div>
         )}
 
-        <main className="flex-1 overflow-y-auto">
+        <main ref={mainRef} className="flex-1 overflow-y-auto overscroll-contain">
           {loading ? (
             <div className="flex h-full items-center justify-center">
               <div className="flex flex-col items-center gap-3">
@@ -46,10 +65,10 @@ export function DocsLayout() {
             </div>
           ) : error ? (
             <div className="flex h-full items-center justify-center px-6 text-center">
-              <p className="text-sm text-rose-500">Couldn't load the API catalog: {error}</p>
+              <p className="text-sm text-rose-400">Couldn't load the API catalog: {error}</p>
             </div>
           ) : (
-            <div className="mx-auto max-w-4xl px-5 py-8 sm:px-8">
+            <div className="mx-auto max-w-4xl px-5 py-8 pb-[calc(env(safe-area-inset-bottom)+2rem)] sm:px-8">
               <Outlet />
             </div>
           )}

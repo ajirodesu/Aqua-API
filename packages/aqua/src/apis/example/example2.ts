@@ -9,7 +9,7 @@ export const meta: ApiMeta = {
     {
       name: 'text',
       desc: 'choose a text here',
-      example: 'Hello, world!',
+      example: 'Hello',
       required: true,
       type: 'select',
       options: ['Hello', 'Hi', 'Sup', 'Hey', 'Hola', 'Yo'],

@@ -1,7 +1,6 @@
 import type { Config } from 'tailwindcss';
 
 export default {
-  darkMode: 'class',
   content: ['./index.html', './src/**/*.{ts,tsx}'],
   theme: {
     extend: {
@@ -25,27 +24,28 @@ export default {
           950: '#062f45',
         },
         surface: {
-          DEFAULT: '#f5f7f9',
-          dim: '#eceef1',
-          card: '#ffffff',
-          darkbase: '#0b1220',
-          dark: '#111a2c',
-          darkcard: '#151f34',
-          darkdim: '#0e1626',
+          DEFAULT: '#0b1220',
+          dim: '#0e1626',
+          card: '#151f34',
+          border: 'rgba(255,255,255,0.08)',
+        },
+        json: {
+          key: '#7dd3fc',
+          string: '#86efac',
+          number: '#fbbf24',
+          boolean: '#c4b5fd',
+          punct: '#64748b',
         },
       },
       boxShadow: {
-        'ios-sm': '0 1px 2px rgba(15, 30, 45, 0.06), 0 1px 1px rgba(15, 30, 45, 0.04)',
-        'ios-md': '0 4px 16px rgba(15, 30, 45, 0.08), 0 1px 3px rgba(15, 30, 45, 0.06)',
-        'ios-lg': '0 12px 40px rgba(15, 30, 45, 0.14), 0 2px 8px rgba(15, 30, 45, 0.06)',
-        'glow-aqua': '0 0 0 1px rgba(10, 180, 232, 0.15), 0 8px 24px rgba(10, 180, 232, 0.18)',
+        'ios-sm': '0 1px 2px rgba(0, 0, 0, 0.28), 0 1px 1px rgba(0, 0, 0, 0.2)',
+        'ios-md': '0 4px 16px rgba(0, 0, 0, 0.35), 0 1px 3px rgba(0, 0, 0, 0.25)',
+        'ios-lg': '0 12px 40px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.3)',
+        'glow-aqua': '0 0 0 1px rgba(10, 180, 232, 0.2), 0 8px 24px rgba(10, 180, 232, 0.22)',
       },
       borderRadius: {
         xl2: '1.25rem',
         '3xl': '1.75rem',
-      },
-      backdropBlur: {
-        xs: '2px',
       },
       keyframes: {
         'fade-up': {

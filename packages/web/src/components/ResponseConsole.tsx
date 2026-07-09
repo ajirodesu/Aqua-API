@@ -1,63 +1,48 @@
 import { CheckCircle2, Clock, Copy, Download, XCircle } from 'lucide-react';
-import { useState } from 'react';
-import ReactMarkdown from 'react-markdown';
+import { useMemo, useState } from 'react';
 import type { ExecuteResult } from '../lib/api';
-import { JsonViewer } from './JsonViewer';
+import { highlightJson } from '../lib/jsonHighlight';
 
 const EXT_BY_CONTENT_TYPE: Record<string, string> = {
   'image/png': 'png',
   'image/jpeg': 'jpg',
   'image/gif': 'gif',
   'image/webp': 'webp',
-  'image/svg+xml': 'svg',
   'video/mp4': 'mp4',
   'video/webm': 'webm',
   'audio/mpeg': 'mp3',
-  'audio/ogg': 'ogg',
   'audio/wav': 'wav',
+  'audio/ogg': 'ogg',
 };
 
-function extensionFor(contentType: string): string {
+function downloadName(contentType: string): string {
   const base = contentType.split(';')[0].trim();
-  if (EXT_BY_CONTENT_TYPE[base]) return EXT_BY_CONTENT_TYPE[base];
-  const subtype = base.split('/')[1];
-  return subtype ? subtype.replace('+xml', '') : 'bin';
-}
-
-function isMarkdown(contentType: string): boolean {
-  return contentType.includes('markdown') || contentType.includes('text/plain');
+  const ext = EXT_BY_CONTENT_TYPE[base] ?? base.split('/')[1] ?? 'bin';
+  return `aqua-response.${ext}`;
 }
 
 export function ResponseConsole({ result }: { result: ExecuteResult | null }) {
   const [copied, setCopied] = useState(false);
 
+  const bodyText = result?.json ? JSON.stringify(result.json, null, 2) : result?.text ?? '';
+  const highlighted = useMemo(
+    () => (result?.json ? highlightJson(bodyText) : null),
+    [result?.json, bodyText]
+  );
+
   if (!result) {
     return (
       <div className="flex h-full min-h-[220px] flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-white/10 p-10 text-center">
         <Clock className="h-6 w-6 text-slate-600" />
-        <p className="text-sm text-slate-400">Run the request to see the response here.</p>
+        <p className="text-sm text-slate-500">Run the request to see the response here.</p>
       </div>
     );
   }
-
-  const bodyText = result.json ? JSON.stringify(result.json, null, 2) : result.text ?? '';
-  const isJson = result.json !== undefined;
-  const isMedia = Boolean(result.blobUrl);
 
   function copy() {
     navigator.clipboard.writeText(bodyText);
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
-  }
-
-  function download() {
-    if (!result?.blobUrl) return;
-    const a = document.createElement('a');
-    a.href = result.blobUrl;
-    a.download = `response.${extensionFor(result.contentType)}`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
   }
 
   return (
@@ -76,21 +61,21 @@ export function ResponseConsole({ result }: { result: ExecuteResult | null }) {
         </div>
         <div className="flex items-center gap-3 text-[12px] text-slate-500">
           <span>{result.durationMs}ms</span>
-          {isMedia ? (
-            <button
-              type="button"
-              onClick={download}
-              className="flex items-center gap-1 rounded-md px-1.5 py-1 text-slate-400 transition hover:bg-white/5 hover:text-white"
+          {result.blobUrl ? (
+            <a
+              href={result.blobUrl}
+              download={downloadName(result.contentType)}
+              className="flex items-center gap-1 rounded-md px-1.5 py-1 text-slate-400 transition-colors duration-200 hover:bg-white/5 hover:text-white"
             >
               <Download className="h-3.5 w-3.5" />
               Download
-            </button>
+            </a>
           ) : (
             bodyText && (
               <button
                 type="button"
                 onClick={copy}
-                className="flex items-center gap-1 rounded-md px-1.5 py-1 text-slate-400 transition hover:bg-white/5 hover:text-white"
+                className="flex items-center gap-1 rounded-md px-1.5 py-1 text-slate-400 transition-colors duration-200 hover:bg-white/5 hover:text-white"
               >
                 <Copy className="h-3.5 w-3.5" />
                 {copied ? 'Copied' : 'Copy'}
@@ -109,36 +94,13 @@ export function ResponseConsole({ result }: { result: ExecuteResult | null }) {
           ) : (
             <audio src={result.blobUrl} controls className="w-full" />
           )
-        ) : isJson ? (
-          <JsonViewer value={result.json} />
-        ) : bodyText && isMarkdown(result.contentType) ? (
-          <div className="space-y-2 text-[13px] leading-relaxed text-slate-200">
-            <ReactMarkdown
-              components={{
-                h1: (p) => <h1 className="font-display text-lg font-bold text-white" {...p} />,
-                h2: (p) => <h2 className="font-display text-base font-bold text-white" {...p} />,
-                h3: (p) => <h3 className="font-display text-[15px] font-bold text-white" {...p} />,
-                a: (p) => <a className="text-aqua-400 underline hover:text-aqua-300" {...p} />,
-                strong: (p) => <strong className="font-bold text-white" {...p} />,
-                em: (p) => <em className="text-slate-300" {...p} />,
-                code: (p) => (
-                  <code className="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[12px] text-aqua-300" {...p} />
-                ),
-                pre: (p) => (
-                  <pre className="overflow-x-auto rounded-lg bg-black/30 p-3 font-mono text-[12px]" {...p} />
-                ),
-                ul: (p) => <ul className="list-disc space-y-1 pl-5" {...p} />,
-                ol: (p) => <ol className="list-decimal space-y-1 pl-5" {...p} />,
-                blockquote: (p) => (
-                  <blockquote className="border-l-2 border-aqua-500/50 pl-3 text-slate-400" {...p} />
-                ),
-              }}
-            >
-              {bodyText}
-            </ReactMarkdown>
-          </div>
+        ) : highlighted ? (
+          <pre
+            className="whitespace-pre-wrap break-words font-mono text-[12.5px] leading-relaxed"
+            dangerouslySetInnerHTML={{ __html: highlighted }}
+          />
         ) : (
-          <pre className="whitespace-pre-wrap break-words font-mono text-[12.5px] leading-relaxed text-slate-200">
+          <pre className="whitespace-pre-wrap break-words font-mono text-[12.5px] leading-relaxed text-slate-300">
             {bodyText || '(empty response)'}
           </pre>
         )}
