@@ -1,9 +1,10 @@
-node_modules/
-packages/aqua/dist/
-packages/web/dist/
-package-lock.json
-.env
-.env.local
 *.log
 .DS_Store
+.env
+.env.local
+.replit
 .vite/
+node_modules/
+package-lock.json
+packages/aqua/dist/
+packages/web/dist/
