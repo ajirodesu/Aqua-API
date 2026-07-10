@@ -1,5 +1,5 @@
 entrypoint = "packages/aqua/src/app.ts"
-modules = ["web", "nodejs-24"]
+modules = ["nodejs-20", "web", "nix"]
 hidden = [".config", "package-lock.json"]
 
 [gitHubImport]

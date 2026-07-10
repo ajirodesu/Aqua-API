@@ -10,14 +10,16 @@ export function TopBar({
   onMenuClick: () => void;
   /** True once the page has been scrolled — reveals the brand name and
    * social links. At rest (top of page) only the hamburger and the
-   * notification bell stay visible, and the bar itself is transparent. */
+   * notification bell stay visible, and the bar itself is transparent.
+   * On desktop (lg+) the header is always visible with its glass
+   * background and full contents, regardless of scroll position. */
   scrolled: boolean;
 }) {
   const { config } = useAppData();
 
   return (
     <header
-      className={`sticky top-0 z-20 flex h-14 shrink-0 items-center gap-2 px-3 transition-all duration-300 ease-ios sm:px-5 ${
+      className={`sticky top-0 z-20 flex h-14 shrink-0 items-center gap-2 px-3 transition-all duration-300 ease-ios sm:px-5 lg:glass lg:border-b ${
         scrolled ? 'glass border-b' : 'border-b border-transparent bg-transparent'
       }`}
     >
@@ -32,7 +34,7 @@ export function TopBar({
 
       <Link
         to="/"
-        className={`absolute left-1/2 flex -translate-x-1/2 items-center gap-2 font-display font-extrabold text-white transition-opacity duration-300 ease-ios lg:static lg:left-auto lg:translate-x-0 ${
+        className={`absolute left-1/2 flex -translate-x-1/2 items-center gap-2 font-display font-extrabold text-white transition-opacity duration-300 ease-ios lg:static lg:left-auto lg:translate-x-0 lg:pointer-events-auto lg:opacity-100 ${
           scrolled ? 'opacity-100' : 'pointer-events-none opacity-0'
         }`}
       >
@@ -41,7 +43,7 @@ export function TopBar({
 
       <div className="relative z-10 ml-auto flex items-center gap-1.5">
         <div
-          className={`flex items-center gap-1.5 transition-opacity duration-300 ease-ios ${
+          className={`flex items-center gap-1.5 transition-opacity duration-300 ease-ios lg:pointer-events-auto lg:opacity-100 ${
             scrolled ? 'opacity-100' : 'pointer-events-none opacity-0'
           }`}
         >

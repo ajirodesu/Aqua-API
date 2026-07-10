@@ -34,8 +34,10 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
 
   return (
     <nav className="flex h-full flex-col" aria-label="API categories">
-      <div className="px-4 pb-3 pt-4">
-        <div className="relative">
+      {/* Search bar sits flush at the top of the sidebar on desktop, matching
+          the TopBar's height, and acts as the sidebar's own header. */}
+      <div className="shrink-0 px-4 pb-3 pt-4 lg:flex lg:h-14 lg:items-center lg:px-5 lg:pb-0 lg:pt-0">
+        <div className="relative w-full">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
           <input
             value={query}
@@ -53,7 +55,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
         end
         onClick={onNavigate}
         className={({ isActive }) =>
-          `mx-3 mb-2 flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-semibold transition-colors duration-200 ${
+          `mx-3 mb-2 flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-semibold transition-colors duration-200 lg:mt-3 ${
             isActive ? 'bg-aqua-500/12 text-aqua-300' : 'text-slate-300 hover:bg-white/5'
           }`
         }

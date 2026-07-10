@@ -139,7 +139,7 @@ export function DocsOverview() {
             </div>
           </div>
           <div className="mt-4 flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2.5">
-            <code className="flex-1 overflow-x-auto whitespace-nowrap font-mono text-[12px] text-slate-300">
+            <code className="scroll-visible-desktop flex-1 overflow-x-auto whitespace-nowrap font-mono text-[12px] text-slate-300">
               {baseUrl}
             </code>
             <button

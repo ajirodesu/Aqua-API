@@ -60,6 +60,19 @@
     outline-offset: 2px;
     border-radius: 4px;
   }
+
+  /* Desktop-only: keep this element's scrollbar visible at rest instead of
+     only while actively scrolling. Used for the Base URL code snippet on
+     the docs overview page, where the truncated content benefits from an
+     always-visible hint that it scrolls horizontally. */
+  @media (min-width: 1024px) {
+    .scroll-visible-desktop::-webkit-scrollbar-thumb {
+      background-color: rgba(255, 255, 255, 0.22);
+    }
+    .scroll-visible-desktop {
+      scrollbar-color: rgba(255, 255, 255, 0.22) transparent;
+    }
+  }
 }
 
 @layer components {
