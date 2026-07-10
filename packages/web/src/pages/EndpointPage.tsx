@@ -1,21 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { ChevronDown, ChevronLeft, Copy, Play } from 'lucide-react';
+import { ChevronLeft, Copy, Play } from 'lucide-react';
 import { useAppData } from '../lib/appData';
 import { MethodBadge } from '../components/MethodBadge';
 import { ParamField } from '../components/ParamField';
 import { ResponseConsole } from '../components/ResponseConsole';
-import { API_ORIGIN, endpointUrl, executeEndpoint, type ExecuteResult } from '../lib/api';
-
-function buildCurl(url: string, method: string, values: Record<string, string>): string {
-  const upper = method.toUpperCase();
-  if (upper === 'GET' || upper === 'DELETE') {
-    const qs = new URLSearchParams(Object.entries(values).filter(([, v]) => v)).toString();
-    return `curl -X ${upper} "${url}${qs ? `?${qs}` : ''}"`;
-  }
-  const form = new URLSearchParams(Object.entries(values).filter(([, v]) => v)).toString();
-  return `curl -X ${upper} "${url}" \\\n  -H "Content-Type: application/x-www-form-urlencoded" \\\n  -d "${form}"`;
-}
+import { CodeExample } from '../components/CodeExample';
+import { API_ORIGIN, executeEndpoint, type ExecuteResult } from '../lib/api';
 
 export function EndpointPage() {
   const { category = '', name = '' } = useParams();
@@ -27,22 +18,23 @@ export function EndpointPage() {
   const [running, setRunning] = useState(false);
   const [result, setResult] = useState<ExecuteResult | null>(null);
   const [urlCopied, setUrlCopied] = useState(false);
-  const [curlOpen, setCurlOpen] = useState(false);
-  const [curlCopied, setCurlCopied] = useState(false);
+  // Signature (method + params) captured at the moment a request was last
+  // sent. Used purely to drive the button label: "Send request again" once
+  // it matches the current form state, reverting to "Send request" the
+  // instant anything changes — including a fresh file/media upload.
+  const [lastSentSignature, setLastSentSignature] = useState<string | null>(null);
 
   useEffect(() => {
     setMethod(endpoint?.methods[0] ?? 'GET');
     setValues({});
     setResult(null);
-    setCurlOpen(false);
+    setLastSentSignature(null);
   }, [endpoint?.path]);
 
-  const fullUrl = useMemo(() => (endpoint ? endpointUrl(endpoint.path) : ''), [endpoint]);
   const publicUrl = useMemo(
     () => (endpoint ? `${API_ORIGIN || window.location.origin}${endpoint.path.split('?')[0]}` : ''),
     [endpoint]
   );
-  const curl = useMemo(() => buildCurl(fullUrl, method, values), [fullUrl, method, values]);
 
   if (!endpoint) {
     return (
@@ -58,8 +50,13 @@ export function EndpointPage() {
 
   const params = endpoint.params ?? [];
   const missingRequired = params.some((p) => p.required && !values[p.name]);
+  // True only while the form is exactly as it was for the last request —
+  // any edit (text, select, or a new upload) changes `values` and this
+  // immediately goes false again.
+  const alreadySent = lastSentSignature !== null && lastSentSignature === JSON.stringify({ method, values });
 
   async function run() {
+    const signature = JSON.stringify({ method, values });
     setRunning(true);
     try {
       const res = await executeEndpoint(endpoint!.path, method, values);
@@ -74,6 +71,7 @@ export function EndpointPage() {
       });
     } finally {
       setRunning(false);
+      setLastSentSignature(signature);
     }
   }
 
@@ -81,12 +79,6 @@ export function EndpointPage() {
     navigator.clipboard.writeText(publicUrl);
     setUrlCopied(true);
     setTimeout(() => setUrlCopied(false), 1500);
-  }
-
-  function copyCurl() {
-    navigator.clipboard.writeText(curl);
-    setCurlCopied(true);
-    setTimeout(() => setCurlCopied(false), 1500);
   }
 
   return (
@@ -163,46 +155,18 @@ export function EndpointPage() {
             ) : (
               <Play className="h-3.5 w-3.5 fill-current" />
             )}
-            {running ? 'Running…' : 'Run request'}
+            {running ? 'Sending…' : alreadySent ? 'Send request again' : 'Send request'}
           </button>
-
-          <div className="mt-5">
-            <button
-              type="button"
-              onClick={() => setCurlOpen((o) => !o)}
-              className="flex items-center gap-1.5 text-[12.5px] font-medium text-slate-500 transition-colors hover:text-slate-300"
-            >
-              <ChevronDown className={`h-3.5 w-3.5 transition-transform duration-200 ease-ios ${curlOpen ? 'rotate-180' : ''}`} />
-              View as curl
-            </button>
-
-            <div
-              className={`grid transition-all duration-300 ease-ios ${
-                curlOpen ? 'mt-2 grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'
-              }`}
-            >
-              <div className="overflow-hidden">
-                <div className="relative">
-                  <pre className="overflow-x-auto rounded-xl bg-[#0d1420] p-3 pr-16 font-mono text-[12px] leading-relaxed text-slate-300">
-                    {curl}
-                  </pre>
-                  <button
-                    type="button"
-                    onClick={copyCurl}
-                    className="absolute right-2 top-2 flex items-center gap-1 rounded-md bg-white/5 px-2 py-1 text-[11px] font-medium text-slate-300 transition-colors duration-200 hover:bg-white/10"
-                  >
-                    <Copy className="h-3 w-3" />
-                    {curlCopied ? 'Copied' : 'Copy'}
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
         </div>
 
         <div>
           <ResponseConsole result={result} />
         </div>
+      </div>
+
+      <div>
+        <h2 className="mb-3 text-[13px] font-bold uppercase tracking-widest text-slate-500">Code example</h2>
+        <CodeExample url={publicUrl} method={method} values={values} />
       </div>
     </div>
   );
