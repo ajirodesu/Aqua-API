@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { ApiHandler, ApiMeta } from '../../types.js';
+import type { ApiHandler, ApiMeta } from '@/types.js';
 import { logger } from '../../logger.js';
 
 export const meta: ApiMeta = {

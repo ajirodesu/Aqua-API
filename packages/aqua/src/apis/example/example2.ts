@@ -1,4 +1,4 @@
-import type { ApiHandler, ApiMeta } from '../../types.js';
+import type { ApiHandler, ApiMeta } from '@/types.js';
 
 export const meta: ApiMeta = {
   name: 'Example 2',
