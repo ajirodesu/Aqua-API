@@ -202,7 +202,7 @@ export const meta: ApiMeta = {
     {
       name: 'username',
       desc: 'Display name shown on the card',
-      example: 'Nova_Prime',
+      example: 'AjiroDesu',
       required: true,
       type: 'text',
     },
@@ -217,7 +217,7 @@ export const meta: ApiMeta = {
     {
       name: 'server',
       desc: 'Server name shown in the subtitle',
-      example: 'Nebula Station',
+      example: 'Ajiro HQ',
       required: false,
       type: 'text',
     },
