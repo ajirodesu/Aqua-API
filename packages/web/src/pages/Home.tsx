@@ -202,7 +202,16 @@ export function Home() {
       {/* Scrollable body — kept in its own overflow-y-auto region (mirroring
           the docs/dashboard shell) so that when the nav drawer is open, the
           backdrop fully owns scroll/touch input and the page behind it
-          can't be scrolled. */}
+          can't be scrolled. While app data is loading, this region shows the
+          same spinner + label used by DocsLayout, instead of the hero. */}
+      {loading ? (
+        <div className="flex flex-1 items-center justify-center">
+          <div className="flex flex-col items-center gap-3">
+            <div className="h-8 w-8 animate-spin rounded-full border-2 border-aqua-500 border-t-transparent" />
+            <p className="text-sm text-slate-400">Loading endpoints…</p>
+          </div>
+        </div>
+      ) : (
       <div ref={scrollRef} className="flex-1 overflow-y-auto overscroll-contain">
       <main className="flex-1">
         {/* HERO */}
@@ -240,12 +249,12 @@ export function Home() {
             style={{ animationDelay: '120ms' }}
           >
             <div className="flex flex-col px-2">
-              <span className="text-xl font-extrabold text-aqua-400">{loading ? '—' : totalEndpoints}</span>
+              <span className="text-xl font-extrabold text-aqua-400">{totalEndpoints}</span>
               <span className="text-[11px] font-medium uppercase tracking-wide text-slate-500">Endpoints</span>
             </div>
             <div className="w-px bg-white/10" />
             <div className="flex flex-col px-2">
-              <span className="text-xl font-extrabold text-aqua-400">{loading ? '—' : buckets.length}</span>
+              <span className="text-xl font-extrabold text-aqua-400">{buckets.length}</span>
               <span className="text-[11px] font-medium uppercase tracking-wide text-slate-500">Categories</span>
             </div>
             <div className="w-px bg-white/10" />
@@ -433,6 +442,7 @@ export function Home() {
         </p>
       </footer>
       </div>
+      )}
     </div>
   );
 }
