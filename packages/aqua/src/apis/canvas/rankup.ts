@@ -8,153 +8,18 @@ import type { ApiHandler, ApiMeta } from '@/types.js';
 type Rgb = [number, number, number];
 
 /**
- * Full standard CSS/X11 named-color table (American spellings only, to
- * avoid duplicate "grey"/"gray" entries in the dropdown). Used both to
- * populate the `color` select options and to resolve a chosen name back
- * to a hex value for rendering.
+ * Important-only accent colors.
+ * Only these named values are allowed.
  */
 const NAMED_COLORS: { name: string; hex: string }[] = [
-  { name: 'Alice Blue', hex: '#f0f8ff' },
-  { name: 'Antique White', hex: '#faebd7' },
-  { name: 'Aqua', hex: '#00ffff' },
-  { name: 'Aquamarine', hex: '#7fffd4' },
-  { name: 'Azure', hex: '#f0ffff' },
-  { name: 'Beige', hex: '#f5f5dc' },
-  { name: 'Bisque', hex: '#ffe4c4' },
-  { name: 'Black', hex: '#000000' },
-  { name: 'Blanched Almond', hex: '#ffebcd' },
-  { name: 'Blue', hex: '#0000ff' },
-  { name: 'Blue Violet', hex: '#8a2be2' },
-  { name: 'Brown', hex: '#a52a2a' },
-  { name: 'Burly Wood', hex: '#deb887' },
-  { name: 'Cadet Blue', hex: '#5f9ea0' },
-  { name: 'Chartreuse', hex: '#7fff00' },
-  { name: 'Chocolate', hex: '#d2691e' },
-  { name: 'Coral', hex: '#ff7f50' },
-  { name: 'Cornflower Blue', hex: '#6495ed' },
-  { name: 'Cornsilk', hex: '#fff8dc' },
-  { name: 'Crimson', hex: '#dc143c' },
-  { name: 'Cyan', hex: '#00ffff' },
-  { name: 'Dark Blue', hex: '#00008b' },
-  { name: 'Dark Cyan', hex: '#008b8b' },
-  { name: 'Dark Goldenrod', hex: '#b8860b' },
-  { name: 'Dark Gray', hex: '#a9a9a9' },
-  { name: 'Dark Green', hex: '#006400' },
-  { name: 'Dark Khaki', hex: '#bdb76b' },
-  { name: 'Dark Magenta', hex: '#8b008b' },
-  { name: 'Dark Olive Green', hex: '#556b2f' },
-  { name: 'Dark Orange', hex: '#ff8c00' },
-  { name: 'Dark Orchid', hex: '#9932cc' },
-  { name: 'Dark Red', hex: '#8b0000' },
-  { name: 'Dark Salmon', hex: '#e9967a' },
-  { name: 'Dark Sea Green', hex: '#8fbc8f' },
-  { name: 'Dark Slate Blue', hex: '#483d8b' },
-  { name: 'Dark Slate Gray', hex: '#2f4f4f' },
-  { name: 'Dark Turquoise', hex: '#00ced1' },
-  { name: 'Dark Violet', hex: '#9400d3' },
-  { name: 'Deep Pink', hex: '#ff1493' },
-  { name: 'Deep Sky Blue', hex: '#00bfff' },
-  { name: 'Dim Gray', hex: '#696969' },
-  { name: 'Dodger Blue', hex: '#1e90ff' },
-  { name: 'Fire Brick', hex: '#b22222' },
-  { name: 'Floral White', hex: '#fffaf0' },
-  { name: 'Forest Green', hex: '#228b22' },
-  { name: 'Fuchsia', hex: '#ff00ff' },
-  { name: 'Gainsboro', hex: '#dcdcdc' },
-  { name: 'Ghost White', hex: '#f8f8ff' },
-  { name: 'Gold', hex: '#ffd700' },
-  { name: 'Goldenrod', hex: '#daa520' },
-  { name: 'Gray', hex: '#808080' },
-  { name: 'Green', hex: '#008000' },
-  { name: 'Green Yellow', hex: '#adff2f' },
-  { name: 'Honeydew', hex: '#f0fff0' },
-  { name: 'Hot Pink', hex: '#ff69b4' },
-  { name: 'Indian Red', hex: '#cd5c5c' },
-  { name: 'Indigo', hex: '#4b0082' },
-  { name: 'Ivory', hex: '#fffff0' },
-  { name: 'Khaki', hex: '#f0e68c' },
-  { name: 'Lavender', hex: '#e6e6fa' },
-  { name: 'Lavender Blush', hex: '#fff0f5' },
-  { name: 'Lawn Green', hex: '#7cfc00' },
-  { name: 'Lemon Chiffon', hex: '#fffacd' },
-  { name: 'Light Blue', hex: '#add8e6' },
-  { name: 'Light Coral', hex: '#f08080' },
-  { name: 'Light Cyan', hex: '#e0ffff' },
-  { name: 'Light Goldenrod Yellow', hex: '#fafad2' },
-  { name: 'Light Gray', hex: '#d3d3d3' },
-  { name: 'Light Green', hex: '#90ee90' },
-  { name: 'Light Pink', hex: '#ffb6c1' },
-  { name: 'Light Salmon', hex: '#ffa07a' },
-  { name: 'Light Sea Green', hex: '#20b2aa' },
-  { name: 'Light Sky Blue', hex: '#87cefa' },
-  { name: 'Light Slate Gray', hex: '#778899' },
-  { name: 'Light Steel Blue', hex: '#b0c4de' },
-  { name: 'Light Yellow', hex: '#ffffe0' },
-  { name: 'Lime', hex: '#00ff00' },
-  { name: 'Lime Green', hex: '#32cd32' },
-  { name: 'Linen', hex: '#faf0e6' },
-  { name: 'Magenta', hex: '#ff00ff' },
-  { name: 'Maroon', hex: '#800000' },
-  { name: 'Medium Aquamarine', hex: '#66cdaa' },
-  { name: 'Medium Blue', hex: '#0000cd' },
-  { name: 'Medium Orchid', hex: '#ba55d3' },
-  { name: 'Medium Purple', hex: '#9370db' },
-  { name: 'Medium Sea Green', hex: '#3cb371' },
-  { name: 'Medium Slate Blue', hex: '#7b68ee' },
-  { name: 'Medium Spring Green', hex: '#00fa9a' },
-  { name: 'Medium Turquoise', hex: '#48d1cc' },
-  { name: 'Medium Violet Red', hex: '#c71585' },
-  { name: 'Midnight Blue', hex: '#191970' },
-  { name: 'Mint Cream', hex: '#f5fffa' },
-  { name: 'Misty Rose', hex: '#ffe4e1' },
-  { name: 'Moccasin', hex: '#ffe4b5' },
-  { name: 'Navajo White', hex: '#ffdead' },
-  { name: 'Navy', hex: '#000080' },
-  { name: 'Old Lace', hex: '#fdf5e6' },
-  { name: 'Olive', hex: '#808000' },
-  { name: 'Olive Drab', hex: '#6b8e23' },
-  { name: 'Orange', hex: '#ffa500' },
-  { name: 'Orange Red', hex: '#ff4500' },
-  { name: 'Orchid', hex: '#da70d6' },
-  { name: 'Pale Goldenrod', hex: '#eee8aa' },
-  { name: 'Pale Green', hex: '#98fb98' },
-  { name: 'Pale Turquoise', hex: '#afeeee' },
-  { name: 'Pale Violet Red', hex: '#db7093' },
-  { name: 'Papaya Whip', hex: '#ffefd5' },
-  { name: 'Peach Puff', hex: '#ffdab9' },
-  { name: 'Peru', hex: '#cd853f' },
-  { name: 'Pink', hex: '#ffc0cb' },
-  { name: 'Plum', hex: '#dda0dd' },
-  { name: 'Powder Blue', hex: '#b0e0e6' },
-  { name: 'Purple', hex: '#800080' },
-  { name: 'Rebecca Purple', hex: '#663399' },
-  { name: 'Red', hex: '#ff0000' },
-  { name: 'Rosy Brown', hex: '#bc8f8f' },
-  { name: 'Royal Blue', hex: '#4169e1' },
-  { name: 'Saddle Brown', hex: '#8b4513' },
-  { name: 'Salmon', hex: '#fa8072' },
-  { name: 'Sandy Brown', hex: '#f4a460' },
-  { name: 'Sea Green', hex: '#2e8b57' },
-  { name: 'Seashell', hex: '#fff5ee' },
-  { name: 'Sienna', hex: '#a0522d' },
-  { name: 'Silver', hex: '#c0c0c0' },
-  { name: 'Sky Blue', hex: '#87ceeb' },
-  { name: 'Slate Blue', hex: '#6a5acd' },
-  { name: 'Slate Gray', hex: '#708090' },
-  { name: 'Snow', hex: '#fffafa' },
-  { name: 'Spring Green', hex: '#00ff7f' },
-  { name: 'Steel Blue', hex: '#4682b4' },
-  { name: 'Tan', hex: '#d2b48c' },
-  { name: 'Teal', hex: '#008080' },
-  { name: 'Thistle', hex: '#d8bfd8' },
-  { name: 'Tomato', hex: '#ff6347' },
-  { name: 'Turquoise', hex: '#40e0d0' },
-  { name: 'Violet', hex: '#ee82ee' },
-  { name: 'Wheat', hex: '#f5deb3' },
-  { name: 'White', hex: '#ffffff' },
-  { name: 'White Smoke', hex: '#f5f5f5' },
-  { name: 'Yellow', hex: '#ffff00' },
-  { name: 'Yellow Green', hex: '#9acd32' },
+  { name: 'Cyan', hex: '#33d0fb' },
+  { name: 'Blue', hex: '#3b82f6' },
+  { name: 'Purple', hex: '#8b5cf6' },
+  { name: 'Pink', hex: '#ec4899' },
+  { name: 'Red', hex: '#ef4444' },
+  { name: 'Orange', hex: '#f97316' },
+  { name: 'Yellow', hex: '#eab308' },
+  { name: 'Green', hex: '#22c55e' },
 ];
 
 /** Normalizes a name for lookup: lowercase, spaces/underscores/dashes stripped. */
@@ -164,15 +29,21 @@ function normalizeColorKey(value: string): string {
 
 const NAMED_COLOR_LOOKUP = new Map(NAMED_COLORS.map((c) => [normalizeColorKey(c.name), c.hex]));
 
-/** Resolves a `color` param (color name, or a raw hex as a fallback) to an RGB triple. */
+/** Resolves a named color only. Raw hex values are not allowed. */
 function resolveColor(value: unknown): Rgb {
-  const fallback = '#33d0fb'; // Aqua brand cyan
-  if (typeof value === 'string' && value.trim()) {
-    const byName = NAMED_COLOR_LOOKUP.get(normalizeColorKey(value));
-    if (byName) return hexToRgb(byName);
-    if (isValidHex(value.trim())) return hexToRgb(value.trim());
+  const fallback = 'Cyan';
+
+  if (typeof value !== 'string' || !value.trim()) {
+    return hexToRgb(NAMED_COLOR_LOOKUP.get(normalizeColorKey(fallback))!);
   }
-  return hexToRgb(fallback);
+
+  const hex = NAMED_COLOR_LOOKUP.get(normalizeColorKey(value));
+
+  if (!hex) {
+    throw new Error(`Invalid color. Allowed colors are: ${NAMED_COLORS.map((c) => c.name).join(', ')}`);
+  }
+
+  return hexToRgb(hex);
 }
 
 export const meta: ApiMeta = {
@@ -225,7 +96,7 @@ export const meta: ApiMeta = {
     },
     {
       name: 'color',
-      desc: 'Named color for the neon glow theme, avatar frame, and progress bar',
+      desc: 'Main accent color used for glow, frame, and progress bar',
       example: 'Cyan',
       required: false,
       type: 'select',
@@ -241,10 +112,6 @@ function clampNum(value: unknown, fallback: number, min: number, max: number): n
   const n = Number(value);
   if (!Number.isFinite(n)) return fallback;
   return Math.min(max, Math.max(min, n));
-}
-
-function isValidHex(hex: string): boolean {
-  return /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(hex);
 }
 
 function hexToRgb(hex: string): Rgb {
@@ -341,7 +208,6 @@ function drawBackground(ctx: SKRSContext2D, color: Rgb): void {
   ctx.fillStyle = glow2;
   ctx.fillRect(0, 0, WIDTH, HEIGHT);
 
-  // Perspective HUD floor grid.
   ctx.save();
   ctx.strokeStyle = rgba(color, 0.5);
   ctx.lineWidth = 1;
@@ -366,7 +232,6 @@ function drawBackground(ctx: SKRSContext2D, color: Rgb): void {
   }
   ctx.restore();
 
-  // Faint CRT scanlines.
   ctx.save();
   ctx.globalAlpha = 0.05;
   ctx.fillStyle = '#ffffff';
@@ -434,7 +299,6 @@ function drawAvatar(
   ctx.stroke();
   ctx.restore();
 
-  // Radial HUD tick marks around the ring.
   ctx.save();
   ctx.strokeStyle = rgba(color, 0.7);
   ctx.lineWidth = 1.5;
@@ -540,7 +404,16 @@ export const onStart: ApiHandler = async ({ req, res }) => {
   const progress = clampNum(body?.progress, 68, 0, 100);
   const rank =
     body?.rank !== undefined && body?.rank !== '' ? clampNum(body.rank, 0, 1, 999999) : null;
-  const color = resolveColor(body?.color);
+
+  let color: Rgb;
+  try {
+    color = resolveColor(body?.color);
+  } catch (err) {
+    return res.status(400).json({
+      error: (err as Error).message,
+      allowedColors: NAMED_COLORS.map((c) => c.name),
+    });
+  }
 
   try {
     const canvas = createCanvas(WIDTH, HEIGHT);
@@ -556,7 +429,11 @@ export const onStart: ApiHandler = async ({ req, res }) => {
 
     const contentX = 340;
 
-    drawGlowText(ctx, 'RANK UP', contentX, 108, color, { font: '700 32px sans-serif', blur: 22, color: '#e9fbff' });
+    drawGlowText(ctx, 'RANK UP', contentX, 108, color, {
+      font: '700 32px sans-serif',
+      blur: 22,
+      color: '#e9fbff',
+    });
 
     ctx.save();
     ctx.font = '600 13px sans-serif';
@@ -582,8 +459,14 @@ export const onStart: ApiHandler = async ({ req, res }) => {
     const prevW = ctx.measureText(prevLabel).width;
     ctx.restore();
 
-    drawGlowText(ctx, '→', contentX + prevW + 18, levelY, color, { font: '700 24px sans-serif', blur: 14 });
-    drawGlowText(ctx, `LV ${level}`, contentX + prevW + 62, levelY, color, { font: '800 26px sans-serif', blur: 20 });
+    drawGlowText(ctx, '→', contentX + prevW + 18, levelY, color, {
+      font: '700 24px sans-serif',
+      blur: 14,
+    });
+    drawGlowText(ctx, `LV ${level}`, contentX + prevW + 62, levelY, color, {
+      font: '800 26px sans-serif',
+      blur: 20,
+    });
 
     const barY = 264;
     const barW = WIDTH - contentX - 70;
@@ -617,7 +500,10 @@ export const onStart: ApiHandler = async ({ req, res }) => {
       ctx.fillText('SERVER RANK', chipX + 14, chipY + 16);
       ctx.restore();
 
-      drawGlowText(ctx, `#${rank}`, chipX + 14, chipY + 33, color, { font: '800 18px sans-serif', blur: 12 });
+      drawGlowText(ctx, `#${rank}`, chipX + 14, chipY + 33, color, {
+        font: '800 18px sans-serif',
+        blur: 12,
+      });
     }
 
     const bufferArr = await canvas.encode('png');
