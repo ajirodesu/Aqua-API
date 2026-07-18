@@ -3,6 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import type { ApiHandler, ApiMeta } from '@/types.js';
 import { detectPlatform, isProbablyUrl } from '@/lib/yoinks/platforms.js';
+import { registerDownload, DOWNLOAD_TTL_MS } from '@/lib/yoinks/downloadRegistry.js';
 import {
   buildChoices,
   download as runDownload,
@@ -20,17 +21,23 @@ import {
  * supported, and so is everything else in yt-dlp's "1,800+ other sites" —
  * any URL yt-dlp can extract works here, it just gets tagged with a
  * `generic` platform + its hostname instead of a friendly label.
+ *
+ * This endpoint always responds with JSON. It never streams the media file
+ * itself — once yt-dlp finishes, the file is registered with a token and the
+ * response's `url` field points at `/download/file?token=...`, which is what
+ * actually serves the bytes (see file.ts). The link is valid for
+ * DOWNLOAD_TTL_MS.
  */
 export const meta: ApiMeta = {
   name: 'Download',
-  desc: 'Download video or audio from YouTube, X/Twitter, Instagram, Threads, TikTok, Vimeo, Twitch, Reddit, Facebook, and 1,800+ other sites (powered by yt-dlp, via the vendored Yoinks engine)',
+  desc: 'Get a JSON response with a download link for video or audio from YouTube, X/Twitter, Instagram, Threads, TikTok, Vimeo, Twitch, Reddit, Facebook, and 1,800+ other sites (powered by yt-dlp, via the vendored Yoinks engine)',
   method: ['get', 'post'],
   category: 'downloader',
   params: [
     {
       name: 'url',
       desc: 'The video/post URL to download',
-      example: 'https://youtu.be/dQw4w9WgXcQ',
+      example: 'https://youtu.be/uyupd2PXbSQ?si=0AtlIozYRTPBxsUY',
       required: true,
       type: 'text',
     },
@@ -116,14 +123,34 @@ export const onStart: ApiHandler = async ({ req, res, logger }) => {
     infoJsonPath = undefined;
 
     const filename = path.basename(filepath);
-    const finalOutDir = outDir;
+    const { token, expiresAt } = registerDownload({
+      filepath,
+      outDir,
+      platform: platform.key,
+      kind: choice.kind,
+      filename,
+    });
+    // Ownership of outDir now belongs to the registry (it deletes it on
+    // expiry) — don't also clean it up here.
+    outDir = undefined;
 
-    res.setHeader('X-Platform', platform.key);
-    res.setHeader('X-Content-Kind', choice.kind);
+    const base = `${req.protocol}://${req.get('host')}`;
+    const downloadUrl = `${base}/download/file?token=${token}`;
 
-    return res.download(filepath, filename, async (err) => {
-      if (err) logger.error(`[download] failed to send file: ${err.message}`);
-      await fs.rm(finalOutDir, { recursive: true, force: true }).catch(() => {});
+    return res.json({
+      status: true,
+      platform: platform.key,
+      platformLabel: platform.label,
+      title: info.title,
+      uploader: info.uploader,
+      duration: info.duration,
+      sourceUrl: info.webpage_url ?? url,
+      kind: choice.kind,
+      quality: choice.label,
+      filename,
+      url: downloadUrl,
+      expiresAt: new Date(expiresAt).toISOString(),
+      expiresInSeconds: Math.round(DOWNLOAD_TTL_MS / 1000),
     });
   } catch (error) {
     if (infoJsonPath) await fs.rm(infoJsonPath, { force: true }).catch(() => {});
