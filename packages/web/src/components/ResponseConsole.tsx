@@ -47,19 +47,19 @@ export function ResponseConsole({ result }: { result: ExecuteResult | null }) {
 
   return (
     <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#0d1420] shadow-ios-md">
-      <div className="flex items-center justify-between border-b border-white/10 bg-white/[.03] px-4 py-2.5">
-        <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5 border-b border-white/10 bg-white/[.03] px-4 py-2.5">
+        <div className="flex min-w-0 items-center gap-2">
           {result.ok ? (
-            <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+            <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-400" />
           ) : (
-            <XCircle className="h-4 w-4 text-rose-400" />
+            <XCircle className="h-4 w-4 shrink-0 text-rose-400" />
           )}
-          <span className={`text-[13px] font-bold ${result.ok ? 'text-emerald-400' : 'text-rose-400'}`}>
+          <span className={`shrink-0 text-[13px] font-bold ${result.ok ? 'text-emerald-400' : 'text-rose-400'}`}>
             {result.status}
           </span>
-          <span className="text-[12px] text-slate-500">{result.contentType.split(';')[0]}</span>
+          <span className="truncate text-[12px] text-slate-500">{result.contentType.split(';')[0]}</span>
         </div>
-        <div className="flex items-center gap-3 text-[12px] text-slate-500">
+        <div className="flex shrink-0 items-center gap-3 text-[12px] text-slate-500">
           <span>{result.durationMs}ms</span>
           {result.blobUrl ? (
             <a

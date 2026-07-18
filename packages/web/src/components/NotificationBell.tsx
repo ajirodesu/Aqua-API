@@ -57,7 +57,7 @@ export function NotificationBell() {
 
       {mounted && (
         <div
-          className={`absolute right-0 top-11 z-30 w-80 origin-top-right rounded-2xl border border-white/10 bg-surface-card p-2 shadow-ios-lg transition-all duration-200 ease-ios ${
+          className={`absolute right-0 top-11 z-30 w-[calc(100vw-1.5rem)] max-w-80 origin-top-right rounded-2xl border border-white/10 bg-surface-card p-2 shadow-ios-lg transition-all duration-200 ease-ios ${
             open ? 'scale-100 opacity-100' : 'pointer-events-none scale-95 opacity-0'
           }`}
         >
@@ -79,7 +79,7 @@ export function NotificationBell() {
                 .map((n) => (
                   <div key={n.id} className="rounded-xl px-3 py-2.5 transition-colors duration-200 hover:bg-white/5">
                     <div className="flex items-center justify-between gap-2">
-                      <span className="text-[13px] font-semibold text-slate-200">{n.title || 'Update'}</span>
+                      <span className="min-w-0 truncate text-[13px] font-semibold text-slate-200">{n.title || 'Update'}</span>
                       <span className="shrink-0 text-[11px] text-slate-500">{timeAgo(n.createdAt)}</span>
                     </div>
                     <p className="mt-0.5 text-[13px] leading-snug text-slate-400">{n.message}</p>

@@ -10,7 +10,22 @@
   html,
   body,
   #root {
-    height: 100%;
+    /* min-height (not height) so pages that are taller than one viewport
+       can grow the document naturally instead of being clipped — that's
+       what lets the browser's own chrome (URL bar, Brave's bottom toolbar,
+       etc.) collapse on scroll like it does on any ordinary page. Screens
+       that want a fixed-height app shell instead (the desktop docs layout)
+       set that explicitly on their own root element. */
+    min-height: 100%;
+    /* NOTE: deliberately no `overflow-x: hidden` here. Any `overflow`
+       value other than `visible` on an ancestor — even just on the x-axis
+       — turns it into a scroll container, and that's what a descendant's
+       `position: sticky` sticks *to*. Since html/body/#root aren't
+       actually the thing that scrolls here, that silently breaks the
+       sticky header instead of hiding anything. The real fixed-width
+       overflow sources (the notification popover, the response console
+       header) are fixed directly at the component level instead. */
+    max-width: 100%;
   }
 
   html {

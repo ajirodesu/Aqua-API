@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   ArrowRight,
@@ -76,8 +76,7 @@ const SECTION_LINKS = [
 export function Home() {
   const { config, totalEndpoints, buckets, loading } = useAppData();
   const year = new Date().getFullYear();
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const scrolled = useScrolled(scrollRef);
+  const scrolled = useScrolled();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerMounted, setDrawerMounted] = useState(false);
 
@@ -90,12 +89,27 @@ export function Home() {
     }
   }, [drawerOpen, drawerMounted]);
 
+  // Lock background scroll while the nav drawer is open — needed now that
+  // the page scrolls natively (see the layout note below) instead of being
+  // trapped in its own overflow-hidden region.
+  useEffect(() => {
+    if (!drawerOpen) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [drawerOpen]);
+
   const gif = config?.header.imageSrc?.[0];
   const size = config?.header.imageSize;
 
   return (
-    <div className="flex h-[100dvh] flex-col overflow-hidden bg-surface">
-      {size && (
+    // Normal document flow (min-height only, no fixed height/overflow-hidden
+    // shell) so the page itself scrolls and the mobile browser's own chrome
+    // — the URL bar, Brave's bottom toolbar, etc. — can collapse on scroll
+    // the way it does on an ordinary page, for a fuller-screen feel.
+    <div className="flex min-h-[100dvh] flex-col bg-surface">      {size && (
         <style>{`
           .hero-gif { width: ${size.mobile}; }
           @media (min-width: 640px) { .hero-gif { width: ${size.tablet}; } }
@@ -199,11 +213,10 @@ export function Home() {
         </div>
       )}
 
-      {/* Scrollable body — kept in its own overflow-y-auto region (mirroring
-          the docs/dashboard shell) so that when the nav drawer is open, the
-          backdrop fully owns scroll/touch input and the page behind it
-          can't be scrolled. While app data is loading, this region shows the
-          same spinner + label used by DocsLayout, instead of the hero. */}
+      {/* Body content. While app data is loading, this region shows the
+          same spinner + label used by DocsLayout, instead of the hero. Now
+          flows naturally in the document (see the layout note above) rather
+          than owning its own scroll region. */}
       {loading ? (
         <div className="flex flex-1 items-center justify-center">
           <div className="flex flex-col items-center gap-3">
@@ -212,7 +225,7 @@ export function Home() {
           </div>
         </div>
       ) : (
-      <div ref={scrollRef} className="flex-1 overflow-y-auto overscroll-contain">
+      <>
       <main className="flex-1">
         {/* HERO */}
         <section className="relative overflow-hidden">
@@ -441,7 +454,7 @@ export function Home() {
           © {year} {config?.name ?? 'API'}. All rights reserved. Built by {config?.operator ?? 'AjiroDesu'}.
         </p>
       </footer>
-      </div>
+      </>
       )}
     </div>
   );
