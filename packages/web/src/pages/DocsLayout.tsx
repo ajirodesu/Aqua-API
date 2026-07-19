@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { Sidebar } from '../components/Sidebar';
 import { TopBar } from '../components/TopBar';
+import { PageLoader } from '../components/PageLoader';
 import { useAppData } from '../lib/appData';
 import { useScrolled } from '../lib/useScrolled';
 
@@ -77,14 +78,16 @@ export function DocsLayout() {
           {drawerMounted && (
             <div className="fixed inset-0 z-40 lg:hidden">
               <div
-                className={`absolute inset-0 bg-black/50 backdrop-blur-sm transition-opacity duration-300 ease-ios ${
-                  drawerOpen ? 'opacity-100' : 'opacity-0'
+                className={`absolute inset-0 bg-black/50 backdrop-blur-sm transition-opacity ease-ios ${
+                  drawerOpen ? 'duration-300 opacity-100' : 'duration-200 opacity-0'
                 }`}
                 onClick={() => setDrawerOpen(false)}
               />
               <div
-                className={`glass absolute inset-y-0 left-0 w-[85%] max-w-xs shadow-ios-lg transition-transform duration-300 ease-ios ${
-                  drawerOpen ? 'translate-x-0' : '-translate-x-full'
+                className={`glass absolute inset-y-0 left-0 w-[85%] max-w-xs origin-left shadow-ios-lg transition-[transform,opacity] will-change-transform ${
+                  drawerOpen
+                    ? 'duration-[350ms] translate-x-0 scale-100 opacity-100 ease-spring'
+                    : 'duration-200 -translate-x-full scale-[0.97] opacity-90 ease-ios'
                 }`}
               >
                 <Sidebar onNavigate={() => setDrawerOpen(false)} />
@@ -95,10 +98,7 @@ export function DocsLayout() {
           <main ref={mainRef} className="lg:flex-1 lg:overflow-y-auto lg:overscroll-contain">
             {loading ? (
               <div className="flex min-h-[60dvh] items-center justify-center lg:h-full lg:min-h-0">
-                <div className="flex flex-col items-center gap-3">
-                  <div className="h-8 w-8 animate-spin rounded-full border-2 border-aqua-500 border-t-transparent" />
-                  <p className="text-sm text-slate-400">Loading endpoints…</p>
-                </div>
+                <PageLoader label="Loading endpoints…" />
               </div>
             ) : error ? (
               <div className="flex min-h-[60dvh] items-center justify-center px-6 text-center lg:h-full lg:min-h-0">

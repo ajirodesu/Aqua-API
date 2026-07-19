@@ -1,6 +1,7 @@
 import { Suspense, lazy } from 'react';
 import { Route, Routes } from 'react-router-dom';
 import { AppDataProvider } from './lib/appData';
+import { PageLoader } from './components/PageLoader';
 
 const Home = lazy(() => import('./pages/Home').then((m) => ({ default: m.Home })));
 const DocsLayout = lazy(() => import('./pages/DocsLayout').then((m) => ({ default: m.DocsLayout })));
@@ -10,8 +11,8 @@ const NotFound = lazy(() => import('./pages/NotFound').then((m) => ({ default: m
 
 function RouteFallback() {
   return (
-    <div className="flex min-h-[100dvh] items-center justify-center bg-surface">
-      <div className="h-8 w-8 animate-spin rounded-full border-2 border-aqua-500 border-t-transparent" />
+    <div className="flex min-h-[100dvh] animate-fade-up items-center justify-center bg-surface">
+      <PageLoader />
     </div>
   );
 }

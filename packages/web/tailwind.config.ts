@@ -67,6 +67,10 @@ export default {
       },
       transitionTimingFunction: {
         ios: 'cubic-bezier(0.32, 0.72, 0, 1)',
+        // Slight overshoot on entry, used for the sidebar/nav drawer's
+        // opening transition so it feels like it "settles" into place
+        // rather than just stopping.
+        spring: 'cubic-bezier(0.34, 1.56, 0.64, 1)',
       },
     },
   },

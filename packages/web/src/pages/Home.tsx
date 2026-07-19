@@ -21,6 +21,7 @@ import {
 import { useAppData } from '../lib/appData';
 import { useScrolled } from '../lib/useScrolled';
 import { NotificationBell } from '../components/NotificationBell';
+import { PageLoader } from '../components/PageLoader';
 
 const FEATURES = [
   {
@@ -173,26 +174,29 @@ export function Home() {
       {drawerMounted && (
         <div className="fixed inset-0 z-40">
           <div
-            className={`absolute inset-0 bg-black/50 backdrop-blur-sm transition-opacity duration-300 ease-ios ${
-              drawerOpen ? 'opacity-100' : 'opacity-0'
+            className={`absolute inset-0 bg-black/50 backdrop-blur-sm transition-opacity ease-ios ${
+              drawerOpen ? 'duration-300 opacity-100' : 'duration-200 opacity-0'
             }`}
             onClick={() => setDrawerOpen(false)}
           />
           <div
-            className={`glass absolute inset-y-0 left-0 flex w-[85%] max-w-xs flex-col shadow-ios-lg transition-transform duration-300 ease-ios ${
-              drawerOpen ? 'translate-x-0' : '-translate-x-full'
+            className={`glass absolute inset-y-0 left-0 flex w-[85%] max-w-xs origin-left flex-col shadow-ios-lg transition-[transform,opacity] will-change-transform ${
+              drawerOpen
+                ? 'duration-[350ms] translate-x-0 scale-100 opacity-100 ease-spring'
+                : 'duration-200 -translate-x-full scale-[0.97] opacity-90 ease-ios'
             }`}
           >
             <div className="flex h-14 shrink-0 items-center border-b border-white/10 px-4 font-display font-extrabold text-white">
               {config?.name ?? 'Aqua APIs'}
             </div>
             <nav className="flex-1 space-y-1 overflow-y-auto p-3">
-              {SECTION_LINKS.map((s) => (
+              {SECTION_LINKS.map((s, i) => (
                 <a
                   key={s.href}
                   href={s.href}
                   onClick={() => setDrawerOpen(false)}
-                  className="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-[13.5px] font-medium text-slate-300 transition-colors hover:bg-white/5"
+                  className="flex animate-fade-up items-center gap-2.5 rounded-xl px-3 py-2.5 text-[13.5px] font-medium text-slate-300 transition-colors hover:bg-white/5"
+                  style={{ animationDelay: `${60 + i * 35}ms` }}
                 >
                   <s.icon className="h-4 w-4 text-aqua-400" strokeWidth={2} />
                   {s.label}
@@ -218,11 +222,8 @@ export function Home() {
           flows naturally in the document (see the layout note above) rather
           than owning its own scroll region. */}
       {loading ? (
-        <div className="flex flex-1 items-center justify-center">
-          <div className="flex flex-col items-center gap-3">
-            <div className="h-8 w-8 animate-spin rounded-full border-2 border-aqua-500 border-t-transparent" />
-            <p className="text-sm text-slate-400">Loading endpoints…</p>
-          </div>
+        <div className="flex flex-1 items-center justify-center py-24">
+          <PageLoader label="Loading endpoints…" />
         </div>
       ) : (
       <>
