@@ -75,10 +75,10 @@ export function ResponseConsole({ result }: { result: ExecuteResult | null }) {
               <button
                 type="button"
                 onClick={copy}
-                className="flex items-center gap-1 rounded-md px-1.5 py-1 text-slate-400 transition-colors duration-200 hover:bg-white/5 hover:text-white"
+                className="flex w-[68px] shrink-0 items-center justify-center gap-1 rounded-md px-1.5 py-1 text-slate-400 transition-colors duration-200 hover:bg-white/5 hover:text-white"
               >
-                <Copy className="h-3.5 w-3.5" />
-                {copied ? 'Copied' : 'Copy'}
+                <Copy className="h-3.5 w-3.5 shrink-0" />
+                <span>{copied ? 'Copied' : 'Copy'}</span>
               </button>
             )
           )}
