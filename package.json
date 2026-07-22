@@ -18,7 +18,5 @@
     "aqua": "npm run dev -w aqua",
     "web": "npm run dev -w web"
   },
-  "dependencies": {
-    "shoti": "^1.1.2"
-  }
+  "dependencies": {}
 }
