@@ -1,5 +1,5 @@
 import { createCanvas, loadImage } from '@napi-rs/canvas';
-import type { ApiHandler, ApiMeta } from '@/types.js';
+import type { ApiHandler, ApiMeta } from '@/engine/types.js';
 
 export const meta: ApiMeta = {
   name: 'Hitler Worse Than Hitler',

@@ -1,13 +1,14 @@
 import Shoti from 'shoti';
-import type { ApiHandler, ApiMeta, AquaConfig } from '@/types.js';
-import { logger } from '../../logger.js';
+import type { ApiHandler, ApiMeta, AquaConfig } from '@/engine/types.js';
+import { env } from '@/engine/env.config.js';
+import { logger } from '../../engine/logger.js';
 
 let cachedClient: Shoti | null = null;
 let cachedKey: string | undefined;
 
 /** Resolves the Shoti API key — env var takes priority, config.shotikey (config.json) is the fallback — and reuses the client as long as the key doesn't change. */
 function getClient(config: AquaConfig): Shoti {
-  const apikey = process.env.SHOTI_APIKEY || (config.shotikey as string | undefined);
+  const apikey = env.SHOTI_APIKEY || (config.shotikey as string | undefined);
 
   if (!cachedClient || cachedKey !== apikey) {
     if (!apikey) {

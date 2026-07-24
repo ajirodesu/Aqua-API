@@ -4,13 +4,13 @@
   "version": "2.0.0",
   "description": "Aqua REST API - TypeScript backend",
   "type": "module",
-  "main": "dist/app.js",
+  "main": "dist/engine/app.js",
   "author": "AjiroDesu",
   "license": "ISC",
   "scripts": {
-    "dev": "tsx watch src/app.ts",
+    "dev": "tsx watch src/engine/app.ts",
     "build": "tsc -p tsconfig.json && tsc-alias -p tsconfig.json",
-    "start": "node dist/app.js",
+    "start": "node dist/engine/app.js",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

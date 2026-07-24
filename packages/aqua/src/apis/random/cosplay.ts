@@ -1,6 +1,6 @@
 import axios from 'axios';
-import type { ApiHandler, ApiMeta } from '@/types.js';
-import { logger } from '../../logger.js';
+import type { ApiHandler, ApiMeta } from '@/engine/types.js';
+import { logger } from '../../engine/logger.js';
 
 export const meta: ApiMeta = {
   name: 'Cosplay',

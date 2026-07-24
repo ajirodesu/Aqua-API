@@ -1,3 +1,7 @@
+// Must be the very first import: populates process.env from .env before
+// any other module (including env.config.ts) reads it.
+import './load-env.js';
+
 import express from 'express';
 import fs from 'node:fs';
 import { promises as fsPromises } from 'node:fs';
@@ -8,6 +12,7 @@ import { networkInterfaces } from 'node:os';
 import chalk from 'chalk';
 
 import { logger } from './logger.js';
+import { env, validateEnv } from './env.config.js';
 import type {
   AquaConfig,
   ApiModule,
@@ -19,16 +24,23 @@ import type {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const PACKAGES_DIR = path.resolve(__dirname, '..', '..');
+// __dirname is now src/engine (or dist/engine when compiled) — one extra
+// level deeper than before, so paths up to the package/monorepo root and
+// across to sibling src folders (apis/, json/) need one more "..".
+const SRC_DIR = path.resolve(__dirname, '..');
+const PACKAGE_DIR = path.resolve(SRC_DIR, '..');
+const PACKAGES_DIR = path.resolve(PACKAGE_DIR, '..');
 const WEB_DIST_DIR = path.join(PACKAGES_DIR, 'web', 'dist');
-const APIS_DIR = path.join(__dirname, 'apis');
-const JSON_DIR = path.join(__dirname, 'json');
+const APIS_DIR = path.join(SRC_DIR, 'apis');
+const JSON_DIR = path.join(SRC_DIR, 'json');
 const NOTIF_PATH = path.join(JSON_DIR, 'notif.json');
 const CONFIG_PATH = path.join(JSON_DIR, 'config.json');
 
 const app = express();
-const PORT = Number(process.env.PORT) || 3000;
-const isProduction = process.env.NODE_ENV === 'production';
+const PORT = env.PORT;
+const isProduction = env.isProduction;
+
+validateEnv();
 
 const config: AquaConfig = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'));
 
@@ -254,7 +266,7 @@ app.get('/api/notifications', (_req, res) => {
 });
 
 app.post('/api/notification', async (req, res) => {
-  const apiKey = process.env.API_KEY || config.key;
+  const apiKey = env.API_KEY || config.key;
 
   if (req.headers.authorization !== apiKey) {
     return res.status(401).json({ error: 'Unauthorized' });

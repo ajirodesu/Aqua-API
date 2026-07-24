@@ -3,7 +3,7 @@ import { writeFileSync, unlinkSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { randomBytes } from 'node:crypto';
-import type { ApiHandler, ApiMeta } from '@/types.js';
+import type { ApiHandler, ApiMeta } from '@/engine/types.js';
 
 export const meta: ApiMeta = {
   name: 'Bonk',
