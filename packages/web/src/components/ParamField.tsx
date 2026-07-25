@@ -37,7 +37,7 @@ export function ParamField({ param, value, onChange, method }: Props) {
   // as long as an example was provided — regardless of whether the value
   // already matches it. It only stays hidden for selects (nothing to
   // prefill) and the upload widget (no text value involved there).
-  const showUseExample = Boolean(param.example) && type !== 'select' && !isUploadWidget;
+  const showUseExample = Boolean(param.example) && type !== 'select' && type !== 'password' && !isUploadWidget;
 
   async function handleFile(file: File | null) {
     if (!file) return;
@@ -143,10 +143,11 @@ export function ParamField({ param, value, onChange, method }: Props) {
         </div>
       ) : (
         <input
-          type={type === 'number' ? 'number' : 'text'}
+          type={type === 'number' ? 'number' : type === 'password' ? 'password' : 'text'}
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={param.example}
+          autoComplete={type === 'password' ? 'off' : undefined}
           className="input-field font-mono text-[13px]"
         />
       )}

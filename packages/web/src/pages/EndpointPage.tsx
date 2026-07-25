@@ -26,7 +26,11 @@ export function EndpointPage() {
 
   useEffect(() => {
     setMethod(endpoint?.methods[0] ?? 'GET');
-    setValues({});
+    const defaults: Record<string, string> = {};
+    for (const p of endpoint?.params ?? []) {
+      if (p.default) defaults[p.name] = p.default;
+    }
+    setValues(defaults);
     setResult(null);
     setLastSentSignature(null);
   }, [endpoint?.path]);
@@ -48,18 +52,31 @@ export function EndpointPage() {
     );
   }
 
-  const params = endpoint.params ?? [];
+  const allParams = endpoint.params ?? [];
+  // A param with `dependsOn` only appears once the param it depends on
+  // currently holds one of the listed values — e.g. `url`/`password` only
+  // show up once `option=add` is selected. Re-evaluated on every render so
+  // the form stays dynamic as the user changes other fields.
+  const params = allParams.filter((p) => {
+    if (!p.dependsOn) return true;
+    const current = values[p.dependsOn.param] ?? '';
+    const allowed = Array.isArray(p.dependsOn.value) ? p.dependsOn.value : [p.dependsOn.value];
+    return allowed.includes(current);
+  });
   const missingRequired = params.some((p) => p.required && !values[p.name]);
   // True only while the form is exactly as it was for the last request —
   // any edit (text, select, or a new upload) changes `values` and this
   // immediately goes false again.
-  const alreadySent = lastSentSignature !== null && lastSentSignature === JSON.stringify({ method, values });
+  const visibleValuesForSignature = Object.fromEntries(params.map((p) => [p.name, values[p.name] ?? '']));
+  const alreadySent =
+    lastSentSignature !== null && lastSentSignature === JSON.stringify({ method, values: visibleValuesForSignature });
 
   async function run() {
-    const signature = JSON.stringify({ method, values });
+    const visibleValues = Object.fromEntries(params.map((p) => [p.name, values[p.name] ?? '']));
+    const signature = JSON.stringify({ method, values: visibleValues });
     setRunning(true);
     try {
-      const res = await executeEndpoint(endpoint!.path, method, values);
+      const res = await executeEndpoint(endpoint!.path, method, visibleValues);
       setResult(res);
     } catch (err) {
       setResult({
@@ -166,7 +183,7 @@ export function EndpointPage() {
 
       <div>
         <h2 className="mb-3 text-[13px] font-bold uppercase tracking-widest text-slate-500">Code example</h2>
-        <CodeExample url={publicUrl} method={method} values={values} />
+        <CodeExample url={publicUrl} method={method} values={visibleValuesForSignature} />
       </div>
     </div>
   );

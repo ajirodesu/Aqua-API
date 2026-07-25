@@ -11,7 +11,11 @@ export interface ApiParam {
   required?: boolean;
   options?: string[];
   /** UI hint for how the docs frontend should render the input. */
-  type?: 'text' | 'number' | 'textarea' | 'select' | 'image' | 'file' | 'audio' | 'video';
+  type?: 'text' | 'number' | 'textarea' | 'select' | 'image' | 'file' | 'audio' | 'video' | 'password';
+  /** Pre-filled value the docs frontend should use before the user touches this field (e.g. a select's implicit default). */
+  default?: string;
+  /** Only show this param in the docs frontend when another param currently holds one of these values. */
+  dependsOn?: { param: string; value: string | string[] };
 }
 
 /** Metadata attached to every endpoint module, used for routing + docs generation. */

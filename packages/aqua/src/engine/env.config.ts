@@ -36,6 +36,11 @@ export interface EnvConfig {
 
   /** Optional override for which `.env` file `load-env.ts` reads (rarely needed manually). */
   DOTENV_CONFIG_PATH: string | undefined;
+
+  /** Turso (libSQL) database URL, e.g. `libsql://<db-name>-<org>.turso.io`. Used by `db/tursoConnection.ts`. */
+  TURSO_DATABASE_URL: string | undefined;
+  /** Auth token for the Turso database. */
+  TURSO_AUTH_TOKEN: string | undefined;
 }
 
 /** Describes one variable for the startup-validation pass. */
@@ -48,9 +53,15 @@ interface EnvVarSpec {
 }
 
 const ENV_VAR_SPECS: EnvVarSpec[] = [
-  { key: 'API_KEY', optional: true, usedBy: 'POST /api/notification (falls back to config.json "key")' },
+  {
+    key: 'API_KEY',
+    optional: true,
+    usedBy: 'POST /api/notification, GET/POST /random/shoti2?option=add (falls back to config.json "key")',
+  },
   { key: 'LUMENFALL_API', optional: true, usedBy: 'GET/POST /ai/lumenfall' },
   { key: 'SHOTI_APIKEY', optional: true, usedBy: 'GET/POST /random/shoti (falls back to config.json "shotikey")' },
+  { key: 'TURSO_DATABASE_URL', optional: true, usedBy: 'GET/POST /random/shoti2 (Turso video store)' },
+  { key: 'TURSO_AUTH_TOKEN', optional: true, usedBy: 'GET/POST /random/shoti2 (Turso video store)' },
 ];
 
 function readString(key: string): string | undefined {
@@ -90,6 +101,9 @@ export const env: EnvConfig = {
   SHOTI_APIKEY: readString('SHOTI_APIKEY'),
 
   DOTENV_CONFIG_PATH: readString('DOTENV_CONFIG_PATH'),
+
+  TURSO_DATABASE_URL: readString('TURSO_DATABASE_URL'),
+  TURSO_AUTH_TOKEN: readString('TURSO_AUTH_TOKEN'),
 };
 
 /**

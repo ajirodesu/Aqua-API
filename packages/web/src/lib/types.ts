@@ -4,7 +4,9 @@ export interface ApiParam {
   example?: string;
   required?: boolean;
   options?: string[];
-  type?: 'text' | 'number' | 'textarea' | 'select' | 'image' | 'file' | 'audio' | 'video';
+  type?: 'text' | 'number' | 'textarea' | 'select' | 'image' | 'file' | 'audio' | 'video' | 'password';
+  default?: string;
+  dependsOn?: { param: string; value: string | string[] };
 }
 
 export interface EndpointItem {
