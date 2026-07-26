@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { randomBytes } from 'node:crypto';
 import type { ApiHandler, ApiMeta } from '@/engine/types.js';
+import { env } from '@/engine/env.config.js';
 
 type Rgb = [number, number, number];
 type LoadedImage = Awaited<ReturnType<typeof loadImage>>;
@@ -250,10 +251,40 @@ export const meta: ApiMeta = {
     },
     {
       name: 'background',
-      desc: 'Optional background photo shown inside the card behind the content, automatically darkened for text readability',
+      desc: 'Background mode. "Dynamic" auto-fetches a random scenery photo on every request; "Custom" lets you supply your own image URL via the "backgroundUrl" field below; "None" keeps the plain panel',
+      example: 'Dynamic',
+      required: false,
+      type: 'select',
+      options: ['None', 'Dynamic', 'Custom'],
+      default: 'None',
+    },
+    {
+      name: 'backgroundUrl',
+      desc: 'Your own background image URL — only used when "background" is set to Custom',
       example: 'https://imgs.search.brave.com/ne6Eq3YZpHXiaN4CudO8RRDhDYLW7YRuWE83RYN26Eo/rs:fit:860:0:0:0/g:ce/aHR0cHM6Ly9jZG4u/d2FsbHBhcGVyc2Fm/YXJpLmNvbS8xMi8x/L0kxQURhay5wbmc',
       required: false,
       type: 'image',
+      dependsOn: { param: 'background', value: 'Custom' },
+    },
+    {
+      name: 'backgroundTheme',
+      desc: 'Which theme "Dynamic" backgrounds are drawn from. "Random" picks a different theme on every request',
+      example: 'Random',
+      required: false,
+      type: 'select',
+      options: [
+        'Random',
+        'Nature',
+        'Cityscape',
+        'Dark City',
+        'Building',
+        'Urban Street',
+        'Minimalist',
+        'Space',
+        'Futuristic',
+      ],
+      default: 'Random',
+      dependsOn: { param: 'background', value: 'Dynamic' },
     },
     {
       name: 'username',
@@ -371,6 +402,196 @@ async function loadAvatarImage(source: string, prefix: string): Promise<LoadedIm
   } catch {
     return null;
   }
+}
+
+interface PixabayHit {
+  largeImageURL?: string;
+  webformatURL?: string;
+}
+interface PixabayResponse {
+  hits?: PixabayHit[];
+}
+interface UnsplashPhoto {
+  urls?: { regular?: string; full?: string };
+}
+
+/** The 8 curated moods "Dynamic" backgrounds can draw from, each mapped to search terms for both photo providers. */
+type BackgroundTheme =
+  | 'nature'
+  | 'cityscape'
+  | 'darkcity'
+  | 'building'
+  | 'urbanstreet'
+  | 'minimalist'
+  | 'space'
+  | 'futuristic';
+
+interface ThemeQuery {
+  pixabayQuery: string;
+  pixabayCategory: string;
+  unsplashQuery: string;
+}
+
+const BACKGROUND_THEMES: Record<BackgroundTheme, ThemeQuery> = {
+  nature: { pixabayQuery: 'landscape nature scenery', pixabayCategory: 'nature', unsplashQuery: 'nature landscape scenery' },
+  cityscape: { pixabayQuery: 'city skyline cityscape', pixabayCategory: 'places', unsplashQuery: 'city skyline cityscape' },
+  darkcity: { pixabayQuery: 'night city dark skyline', pixabayCategory: 'places', unsplashQuery: 'night city dark skyline' },
+  building: { pixabayQuery: 'building architecture', pixabayCategory: 'buildings', unsplashQuery: 'architecture building' },
+  urbanstreet: { pixabayQuery: 'urban street traffic road', pixabayCategory: 'places', unsplashQuery: 'urban street traffic road' },
+  minimalist: { pixabayQuery: 'minimalist abstract background', pixabayCategory: 'backgrounds', unsplashQuery: 'minimalist abstract background' },
+  space: { pixabayQuery: 'space galaxy stars nebula', pixabayCategory: 'science', unsplashQuery: 'space galaxy nebula' },
+  futuristic: { pixabayQuery: 'futuristic technology digital', pixabayCategory: 'computer', unsplashQuery: 'futuristic technology digital' },
+};
+
+const THEME_KEYS = Object.keys(BACKGROUND_THEMES) as BackgroundTheme[];
+
+const THEME_ALIASES: Record<string, BackgroundTheme> = {
+  nature: 'nature',
+  cityscape: 'cityscape',
+  city: 'cityscape',
+  darkcity: 'darkcity',
+  nightcity: 'darkcity',
+  night: 'darkcity',
+  building: 'building',
+  buildings: 'building',
+  architecture: 'building',
+  urbanstreet: 'urbanstreet',
+  street: 'urbanstreet',
+  traffic: 'urbanstreet',
+  road: 'urbanstreet',
+  urban: 'urbanstreet',
+  minimalist: 'minimalist',
+  minimal: 'minimalist',
+  space: 'space',
+  galaxy: 'space',
+  futuristic: 'futuristic',
+  future: 'futuristic',
+  tech: 'futuristic',
+  techinspired: 'futuristic',
+};
+
+/** Resolves the `backgroundTheme` param to a concrete theme, or `null` to mean "pick one at random per request". */
+function resolveBackgroundTheme(value: unknown): BackgroundTheme | null {
+  if (typeof value !== 'string' || !value.trim()) return null;
+  const key = normalizeColorKey(value);
+  if (key === 'random' || key === 'any' || key === '') return null;
+  return THEME_ALIASES[key] ?? null;
+}
+
+function pickRandomTheme(): BackgroundTheme {
+  return THEME_KEYS[Math.floor(Math.random() * THEME_KEYS.length)];
+}
+
+/**
+ * Resolves the `background` + `backgroundUrl` params down to a single image
+ * source (a URL, or `null` for no background):
+ *  - "None" / empty            -> null
+ *  - "Dynamic"                 -> handled separately by loadDynamicBackground
+ *  - "Custom"                  -> whatever URL was given in `backgroundUrl`
+ *  - anything else non-empty   -> used as-is, so old `background=<url>` calls
+ *                                 (from before this param became a select)
+ *                                 keep working unchanged
+ */
+function resolveBackgroundInput(background: unknown, backgroundUrl: unknown): string | 'dynamic' | null {
+  const raw = typeof background === 'string' ? background.trim() : '';
+  if (!raw) return null;
+
+  const key = normalizeColorKey(raw);
+  if (key === 'none') return null;
+  if (key === 'dynamic' || key === 'random' || key === 'auto') return 'dynamic';
+  if (key === 'custom') {
+    const url = typeof backgroundUrl === 'string' ? backgroundUrl.trim() : '';
+    return url || null;
+  }
+
+  return raw;
+}
+
+/** Pixabay search, scoped to one theme. Free tier, no per-request cost — needs `PIXABAY_API_KEY`. No true "random" endpoint, so a random results page + a random pick within it keeps results varied across calls. */
+async function fetchPixabayUrl(theme: ThemeQuery): Promise<string | null> {
+  const apiKey = env.PIXABAY_API_KEY;
+  if (!apiKey) return null;
+
+  try {
+    const page = Math.floor(Math.random() * 20) + 1;
+    const url =
+      `https://pixabay.com/api/?key=${encodeURIComponent(apiKey)}` +
+      `&q=${encodeURIComponent(theme.pixabayQuery)}&category=${encodeURIComponent(theme.pixabayCategory)}` +
+      `&orientation=horizontal&image_type=photo&safesearch=true&per_page=50&page=${page}`;
+
+    const res = await fetch(url);
+    if (!res.ok) return null;
+
+    const data = (await res.json()) as PixabayResponse;
+    const hits = (data.hits ?? []).filter((h) => h.largeImageURL || h.webformatURL);
+    if (hits.length === 0) return null;
+
+    const pick = hits[Math.floor(Math.random() * hits.length)];
+    return pick.largeImageURL ?? pick.webformatURL ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/** Unsplash's official random-photo endpoint, scoped to one theme. Secondary provider — tried when Pixabay is unset or comes back empty. Needs `UNSPLASH_ACCESS_KEY`. */
+async function fetchUnsplashUrl(theme: ThemeQuery, width: number, height: number): Promise<string | null> {
+  const accessKey = env.UNSPLASH_ACCESS_KEY;
+  if (!accessKey) return null;
+
+  try {
+    const url = `https://api.unsplash.com/photos/random?orientation=landscape&query=${encodeURIComponent(theme.unsplashQuery)}`;
+    const res = await fetch(url, { headers: { Authorization: `Client-ID ${accessKey}` } });
+    if (!res.ok) return null;
+
+    const data = (await res.json()) as UnsplashPhoto;
+    const base = data.urls?.regular ?? data.urls?.full;
+    if (!base) return null;
+
+    // Imgix params (Unsplash's CDN) crop it to the exact card size server-side.
+    const sep = base.includes('?') ? '&' : '?';
+    return `${base}${sep}w=${width}&h=${height}&fit=crop&crop=entropy`;
+  } catch {
+    return null;
+  }
+}
+
+/** No-key, no-signup, always-available fallback. Not theme-filtered, but guarantees a photo exists so "Dynamic" never renders blank. */
+function picsumFallbackUrl(width: number, height: number): string {
+  const seed = randomBytes(6).toString('hex');
+  return `https://picsum.photos/seed/${seed}/${width}/${height}`;
+}
+
+/**
+ * Resolves a "Dynamic" background end-to-end: picks a theme, tries each
+ * photo provider in order, and actually attempts to *load* each candidate
+ * (not just fetch its URL) before moving on — a provider returning a dead
+ * or unreadable link doesn't stop the chain. Picsum is tried last and is
+ * effectively always reachable, so this only returns `null` if every
+ * network path is down.
+ */
+async function loadDynamicBackground(
+  themeInput: unknown,
+  width: number,
+  height: number,
+  prefix: string,
+  loadImageFrom: (source: string, prefix: string) => Promise<LoadedImage | null>
+): Promise<LoadedImage | null> {
+  const theme = BACKGROUND_THEMES[resolveBackgroundTheme(themeInput) ?? pickRandomTheme()];
+
+  const providers: Array<() => Promise<string | null>> = [
+    () => fetchPixabayUrl(theme),
+    () => fetchUnsplashUrl(theme, width, height),
+  ];
+
+  for (const getCandidateUrl of providers) {
+    const url = await getCandidateUrl();
+    if (!url) continue;
+
+    const img = await loadImageFrom(url, prefix);
+    if (img) return img;
+  }
+
+  return loadImageFrom(picsumFallbackUrl(width, height), prefix);
 }
 
 /** Rounded rect with two opposite corners clipped diagonally — the core "tech panel" silhouette. */
@@ -760,7 +981,7 @@ export const onStart: ApiHandler = async ({ req, res }) => {
   const cfg = PLATFORM_CONFIGS[platform];
 
   const avatar = typeof body?.avatar === 'string' && body.avatar.trim() ? body.avatar.trim() : null;
-  const background = typeof body?.background === 'string' && body.background.trim() ? body.background.trim() : null;
+  const backgroundInput = resolveBackgroundInput(body?.background, body?.backgroundUrl);
   const username = typeof body?.username === 'string' ? body.username : undefined;
   const levelRaw = body?.level;
 
@@ -801,7 +1022,12 @@ export const onStart: ApiHandler = async ({ req, res }) => {
     const panelW = WIDTH - panelX * 2;
     const panelH = HEIGHT - panelY * 2;
 
-    const backgroundImg = background ? await loadAvatarImage(background, `rankup_${platform}_bg`) : null;
+    const backgroundImg =
+      backgroundInput === 'dynamic'
+        ? await loadDynamicBackground(body?.backgroundTheme, cfg.width, cfg.height, `rankup_${platform}_bg`, loadAvatarImage)
+        : backgroundInput
+          ? await loadAvatarImage(backgroundInput, `rankup_${platform}_bg`)
+          : null;
     const bracketInset = platform === 'telegram' ? 16 : 12;
     drawPanel(ctx, panelX, panelY, panelW, panelH, color, backgroundImg, cfg.panelR, cfg.panelCut, cfg.bracketLen, bracketInset);
 

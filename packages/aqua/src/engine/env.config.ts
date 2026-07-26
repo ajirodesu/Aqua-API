@@ -34,6 +34,11 @@ export interface EnvConfig {
   /** API key for the `shoti` client (`/random/shoti`). Falls back to config.json's `shotikey` field if unset. */
   SHOTI_APIKEY: string | undefined;
 
+  /** Pixabay API key. Powers themed "Dynamic" backgrounds (Nature, Cityscape, Space, etc.) on `/canvas/rankup` and `/canvas/greet` via Pixabay's search API. Free tier, no cost. Falls back to Unsplash, then Lorem Picsum, when unset. */
+  PIXABAY_API_KEY: string | undefined;
+  /** Unsplash API access key. Secondary source for themed "Dynamic" backgrounds — tried when Pixabay is unset or returns no result. Free tier, no cost. */
+  UNSPLASH_ACCESS_KEY: string | undefined;
+
   /** Optional override for which `.env` file `load-env.ts` reads (rarely needed manually). */
   DOTENV_CONFIG_PATH: string | undefined;
 
@@ -60,6 +65,17 @@ const ENV_VAR_SPECS: EnvVarSpec[] = [
   },
   { key: 'LUMENFALL_API', optional: true, usedBy: 'GET/POST /ai/lumenfall' },
   { key: 'SHOTI_APIKEY', optional: true, usedBy: 'GET/POST /random/shoti (falls back to config.json "shotikey")' },
+  {
+    key: 'PIXABAY_API_KEY',
+    optional: true,
+    usedBy:
+      'GET/POST /canvas/rankup, /canvas/greet (background=Dynamic) — themed photo search. Falls back to UNSPLASH_ACCESS_KEY, then Lorem Picsum, when unset',
+  },
+  {
+    key: 'UNSPLASH_ACCESS_KEY',
+    optional: true,
+    usedBy: 'GET/POST /canvas/rankup, /canvas/greet (background=Dynamic) — secondary themed photo source, tried after Pixabay',
+  },
   { key: 'TURSO_DATABASE_URL', optional: true, usedBy: 'GET/POST /random/shoti2 (Turso video store)' },
   { key: 'TURSO_AUTH_TOKEN', optional: true, usedBy: 'GET/POST /random/shoti2 (Turso video store)' },
 ];
@@ -99,6 +115,9 @@ export const env: EnvConfig = {
 
   LUMENFALL_API: readString('LUMENFALL_API'),
   SHOTI_APIKEY: readString('SHOTI_APIKEY'),
+
+  PIXABAY_API_KEY: readString('PIXABAY_API_KEY'),
+  UNSPLASH_ACCESS_KEY: readString('UNSPLASH_ACCESS_KEY'),
 
   DOTENV_CONFIG_PATH: readString('DOTENV_CONFIG_PATH'),
 
