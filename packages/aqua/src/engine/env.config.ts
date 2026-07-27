@@ -42,10 +42,12 @@ export interface EnvConfig {
   /** Optional override for which `.env` file `load-env.ts` reads (rarely needed manually). */
   DOTENV_CONFIG_PATH: string | undefined;
 
-  /** Turso (libSQL) database URL, e.g. `libsql://<db-name>-<org>.turso.io`. Used by `db/tursoConnection.ts`. */
-  TURSO_DATABASE_URL: string | undefined;
-  /** Auth token for the Turso database. */
-  TURSO_AUTH_TOKEN: string | undefined;
+  /** GitHub fine-grained personal access token with the "Gists: write" permission, belonging to the target gist's owner. Required to read/edit the secret gist backing `/random/shoti3`. */
+  GITHUB_TOKEN: string | undefined;
+  /** ID of the gist that stores the shoti3 TikTok URL pool. Defaults to the gist shipped with this endpoint (`306e70b8414690012b5092a9bbfaaa85`) when unset. */
+  SHOTI_GIST_ID: string | undefined;
+  /** Name of the file inside the shoti3 gist that holds the JSON array of URLs. Defaults to `Shoti` when unset. */
+  SHOTI_GIST_FILENAME: string | undefined;
 }
 
 /** Describes one variable for the startup-validation pass. */
@@ -76,8 +78,9 @@ const ENV_VAR_SPECS: EnvVarSpec[] = [
     optional: true,
     usedBy: 'GET/POST /canvas/rankup, /canvas/greet (background=Dynamic) — secondary themed photo source, tried after Pixabay',
   },
-  { key: 'TURSO_DATABASE_URL', optional: true, usedBy: 'GET/POST /random/shoti2 (Turso video store)' },
-  { key: 'TURSO_AUTH_TOKEN', optional: true, usedBy: 'GET/POST /random/shoti2 (Turso video store)' },
+  { key: 'GITHUB_TOKEN', optional: true, usedBy: 'GET/POST /random/shoti2 (reads/edits the Gist video store)' },
+  { key: 'SHOTI_GIST_ID', optional: true, usedBy: 'GET/POST /random/shoti2 (falls back to the bundled gist ID)' },
+  { key: 'SHOTI_GIST_FILENAME', optional: true, usedBy: 'GET/POST /random/shoti2 (falls back to "Shoti")' },
 ];
 
 function readString(key: string): string | undefined {
@@ -121,8 +124,9 @@ export const env: EnvConfig = {
 
   DOTENV_CONFIG_PATH: readString('DOTENV_CONFIG_PATH'),
 
-  TURSO_DATABASE_URL: readString('TURSO_DATABASE_URL'),
-  TURSO_AUTH_TOKEN: readString('TURSO_AUTH_TOKEN'),
+  GITHUB_TOKEN: readString('GITHUB_TOKEN'),
+  SHOTI_GIST_ID: readString('SHOTI_GIST_ID'),
+  SHOTI_GIST_FILENAME: readString('SHOTI_GIST_FILENAME'),
 };
 
 /**

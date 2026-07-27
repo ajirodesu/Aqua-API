@@ -1,57 +1,99 @@
 /*
  * INFO: shoti2.ts
- * Combines the old, separate `addVideo` / `getVideo` Express handlers into
- * a single Aqua endpoint. Callers pick a mode via the `option` param:
+ * Same `option=add` / `option=get` contract as shoti2.ts, but the video
+ * pool lives in a GitHub Gist instead of Turso — a single JSON array of
+ * TikTok URLs stored in one file of the target gist:
  *
- *   option=add  -> stores a new TikTok URL (requires `url` + `password`)
- *   option=get  -> (default) returns a random stored TikTok, resolved
- *                  through tikwm
+ *
+ *   option=add  -> fetches the gist, appends the new URL to the array,
+ *                  and PATCHes the file back (requires `url` + `password`)
+ *   option=get  -> (default) picks a random URL from the cached pool and
+ *                  resolves it through tikwm — identical to shoti2
  *
  * `option=add` is gated behind `password`, checked against the same
  * `API_KEY` env var (falling back to config.json's `key`) used by
- * POST /api/notification. `url`/`password` are declared with `dependsOn`
- * so the docs frontend only renders them once `option=add` is selected —
- * they stay hidden for `option=get`.
+ * shoti2/POST /api/notification.
  *
- * Storage moved from Mongo (`db/mongoConnection.js`) to Turso/libSQL
- * (`db/tursoConnection.ts`) — same writeData/readData shape, different
- * backend.
+ * Editing (and, since this gist is secret, even reading) it requires a
+ * GitHub fine-grained personal access token with the "Gists: write"
+ * account permission, belonging to the gist's owner — set via
+ * `GITHUB_TOKEN`. The gist ID and target filename default to the values
+ * above but can be overridden with `SHOTI_GIST_ID` / `SHOTI_GIST_FILENAME`
+ * if the pool is ever moved to a different gist.
  */
 
 import axios from 'axios';
-import moment from 'moment-timezone';
 import type { ApiHandler, ApiMeta } from '@/engine/types.js';
-import { readData, writeData } from '@/db/tursoConnection.js';
 import { env } from '@/engine/env.config.js';
 import { logger } from '../../engine/logger.js';
 
-interface VideoRow {
-  id: number;
-  url: string;
-  createdAt: string;
-}
+const GIST_API_BASE = 'https://api.github.com/gists';
+const DEFAULT_GIST_ID = '306e70b8414690012b5092a9bbfaaa85';
+const DEFAULT_GIST_FILENAME = 'Shoti';
 
-/** In-memory cache of stored videos, refreshed on an interval and right after every add. */
-let videosCache: VideoRow[] = [];
+/** In-memory cache of stored TikTok URLs, refreshed on an interval and right after every add. */
+let urlsCache: string[] = [];
 let refreshTimer: NodeJS.Timeout | null = null;
 let initialLoad: Promise<void> | null = null;
 
+function gistId(): string {
+  return env.SHOTI_GIST_ID || DEFAULT_GIST_ID;
+}
+
+function gistFilename(): string {
+  return env.SHOTI_GIST_FILENAME || DEFAULT_GIST_FILENAME;
+}
+
+function githubHeaders(): Record<string, string> {
+  const headers: Record<string, string> = {
+    Accept: 'application/vnd.github+json',
+    'X-GitHub-Api-Version': '2022-11-28',
+  };
+
+  if (env.GITHUB_TOKEN) {
+    headers.Authorization = `Bearer ${env.GITHUB_TOKEN}`;
+  }
+
+  return headers;
+}
+
+/**
+ * Fetches the gist and parses its target file's content as a JSON array of
+ * URLs. Returns `[]` on any shape mismatch instead of throwing, so a
+ * manually-edited (or empty) gist can't crash the endpoint.
+ */
+async function fetchGistUrls(): Promise<string[]> {
+  const response = await axios.get(`${GIST_API_BASE}/${gistId()}`, { headers: githubHeaders() });
+  const file = response.data?.files?.[gistFilename()];
+
+  if (!file?.content) {
+    logger.warn(`shoti3: gist ${gistId()} has no file named "${gistFilename()}" — treating pool as empty.`);
+    return [];
+  }
+
+  try {
+    const parsed = JSON.parse(file.content);
+    return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === 'string') : [];
+  } catch (error) {
+    logger.error(`shoti3: failed to parse gist content as JSON: ${(error as Error).message}`);
+    return [];
+  }
+}
+
 async function refreshCache(): Promise<void> {
   try {
-    videosCache = (await readData('videos')) as unknown as VideoRow[];
+    urlsCache = await fetchGistUrls();
   } catch (error) {
-    logger.error(`shoti2: failed to refresh video cache: ${(error as Error).message}`);
+    logger.error(`shoti3: failed to refresh video cache: ${(error as Error).message}`);
   }
 }
 
 /**
  * Kicks off the 1-minute refresh interval once, and — critically — returns
- * the *same* promise for the very first load on every call until it settles.
- * Without this, the fire-and-forget refresh on a fresh server start could
- * still be in flight when the first `option=get` request landed, so it saw
- * an empty `videosCache` and wrongly reported "No videos have been added
- * yet" even though the database already had rows. Awaiting this in
- * `onStart` guarantees the cache is populated before any request is served.
+ * the *same* promise for the very first load on every call until it
+ * settles. Mirrors shoti2's `ensureRefreshLoop` so a request landing right
+ * after a cold start can't see an empty `urlsCache` before the gist has
+ * been fetched at least once.
  */
 function ensureRefreshLoop(): Promise<void> {
   if (!refreshTimer) {
@@ -82,8 +124,8 @@ function isValidUrl(value: unknown): value is string {
 }
 
 export const meta: ApiMeta = {
-  name: 'Shoti 2',
-  desc: 'Manage the community TikTok pool — add a URL, or fetch a random one resolved through tikwm',
+  name: 'Shoti V2',
+  desc: 'Manage the community TikTok pool via a GitHub Gist — add a URL, or fetch a random one resolved through tikwm',
   method: ['get', 'post'],
   category: 'random',
   params: [
@@ -123,7 +165,7 @@ async function handleAdd(
   const apiKey = env.API_KEY || (config.key as string | undefined);
 
   if (!apiKey) {
-    logger.warn('shoti2: API_KEY / config.key is not set — refusing all option=add requests until one is configured.');
+    logger.warn('shoti3: API_KEY / config.key is not set — refusing all option=add requests until one is configured.');
     return res.status(503).json({ code: 503, error: 'Adding videos is not configured on this server yet' });
   }
 
@@ -131,36 +173,54 @@ async function handleAdd(
     return res.status(401).json({ code: 401, error: 'Invalid or missing password' });
   }
 
+  if (!env.GITHUB_TOKEN) {
+    logger.warn('shoti3: GITHUB_TOKEN is not set — refusing all option=add requests until one is configured.');
+    return res.status(503).json({ code: 503, error: 'Gist editing is not configured on this server yet' });
+  }
+
   if (!isValidUrl(url)) {
     return res.status(400).json({ code: 400, error: 'A valid "url" is required' });
   }
 
   const trimmedUrl = url.trim();
-  const exists = videosCache.some((video) => video.url === trimmedUrl);
 
-  if (exists) {
+  // Re-fetch the live gist content right before writing — instead of
+  // trusting `urlsCache` — so a stale local cache (or a manual gist edit
+  // that happened in between) can't cause a duplicate or a lost write.
+  const currentUrls = await fetchGistUrls();
+
+  if (currentUrls.includes(trimmedUrl)) {
     return res.status(400).json({ code: 400, error: 'Video already exists' });
   }
 
-  await writeData('videos', {
-    url: trimmedUrl,
-    createdAt: moment().tz('Asia/Manila').format('YYYY-MM-DD HH:mm:ss'),
-  });
+  const updatedUrls = [...currentUrls, trimmedUrl];
 
-  await refreshCache();
+  await axios.patch(
+    `${GIST_API_BASE}/${gistId()}`,
+    {
+      files: {
+        [gistFilename()]: {
+          content: JSON.stringify(updatedUrls, null, 2),
+        },
+      },
+    },
+    { headers: githubHeaders() }
+  );
+
+  urlsCache = updatedUrls;
 
   return res.status(200).json({ code: 200, message: 'Video added successfully' });
 }
 
 async function handleGet(res: Parameters<ApiHandler>[0]['res']) {
-  if (videosCache.length === 0) {
+  if (urlsCache.length === 0) {
     return res.status(404).json({ code: 404, error: 'No videos have been added yet' });
   }
 
-  const randomIndex = Math.floor(Math.random() * videosCache.length);
-  const video = videosCache[randomIndex];
+  const randomIndex = Math.floor(Math.random() * urlsCache.length);
+  const url = urlsCache[randomIndex];
 
-  const response = await axios.get(`https://tikwm.com/api?url=${encodeURIComponent(video.url)}`);
+  const response = await axios.get(`https://tikwm.com/api?url=${encodeURIComponent(url)}`);
   const videoInfo = response.data;
 
   return res.status(200).json({
@@ -196,7 +256,7 @@ export const onStart: ApiHandler = async ({ req, res, config }) => {
     }
     return await handleGet(res);
   } catch (error) {
-    logger.error(`shoti2 (${option}) error: ${(error as Error).message}`);
+    logger.error(`shoti3 (${option}) error: ${(error as Error).message}`);
     return res.status(500).json({
       code: 500,
       message: option === 'add' ? 'Error adding video' : 'Failed to fetch video',
