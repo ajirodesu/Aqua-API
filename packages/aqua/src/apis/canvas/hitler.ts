@@ -2,7 +2,7 @@ import { createCanvas, loadImage } from '@napi-rs/canvas';
 import type { ApiHandler, ApiMeta } from '@/engine/types.js';
 
 export const meta: ApiMeta = {
-  name: 'Hitler Worse Than Hitler',
+  name: 'Worse Than Hitler',
   desc: 'Generate a "Worse Than Hitler" meme overlay with an image avatar',
   method: ['get', 'post'],
   category: 'canvas',
