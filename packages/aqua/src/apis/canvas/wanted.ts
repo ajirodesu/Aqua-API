@@ -1,5 +1,5 @@
 import { createCanvas, loadImage } from '@napi-rs/canvas';
-import type { ApiHandler, ApiMeta } from '@/engine/types.js';
+import type { ApiHandler, ApiMeta, EndpointCtx } from '@/engine/types.js';
 
 export const meta: ApiMeta = {
   name: 'Wanted Poster',
@@ -54,7 +54,7 @@ function getFitFontSize(
   return ctx.font;
 }
 
-export const onStart: ApiHandler = async ({ req, res }) => {
+export async function initialize({ req, res }: EndpointCtx) {
   const image: string | undefined =
     req.method === 'POST' ? req.body?.image : (req.query?.image as string);
 

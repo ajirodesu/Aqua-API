@@ -1,5 +1,5 @@
 import { createCanvas, loadImage } from '@napi-rs/canvas';
-import type { ApiHandler, ApiMeta } from '@/engine/types.js';
+import type { ApiHandler, ApiMeta, EndpointCtx } from '@/engine/types.js';
 
 export const meta: ApiMeta = {
   name: 'Kiss Me',
@@ -42,7 +42,7 @@ function resolveImageSource(image: string): string | Buffer {
   return image;
 }
 
-export const onStart: ApiHandler = async ({ req, res }) => {
+export async function initialize({ req, res }: EndpointCtx) {
   const image1: string | undefined =
     req.method === 'POST' ? req.body?.image1 : (req.query?.image1 as string);
   const image2: string | undefined =

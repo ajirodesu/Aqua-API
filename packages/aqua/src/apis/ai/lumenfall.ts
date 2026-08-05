@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { ApiHandler, ApiMeta } from '@/engine/types.js';
+import type { ApiHandler, ApiMeta, EndpointCtx } from '@/engine/types.js';
 import { env } from '@/engine/env.config.js';
 import { logger } from '../../engine/logger.js';
 
@@ -35,7 +35,7 @@ export const meta: ApiMeta = {
   ],
 };
 
-export const onStart: ApiHandler = async ({ req, res, config }) => {
+export async function initialize({ req, res, config }: EndpointCtx) {
   const body = (req.method === 'POST' ? req.body : req.query) as Record<string, unknown>;
   const prompt = typeof body?.prompt === 'string' ? body.prompt.trim() : '';
   const size = typeof body?.size === 'string' && body.size.trim() ? body.size.trim() : '1024x1024';

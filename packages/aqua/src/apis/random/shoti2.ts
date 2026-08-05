@@ -23,7 +23,7 @@
  */
 
 import axios from 'axios';
-import type { ApiHandler, ApiMeta } from '@/engine/types.js';
+import type { ApiHandler, ApiMeta, EndpointCtx } from '@/engine/types.js';
 import { env } from '@/engine/env.config.js';
 import { logger } from '../../engine/logger.js';
 
@@ -244,7 +244,7 @@ async function handleGet(res: Parameters<ApiHandler>[0]['res']) {
   });
 }
 
-export const onStart: ApiHandler = async ({ req, res, config }) => {
+export async function initialize({ req, res, config }: EndpointCtx) {
   await ensureRefreshLoop();
 
   const body = (req.method === 'POST' ? req.body : req.query) as Record<string, unknown>;

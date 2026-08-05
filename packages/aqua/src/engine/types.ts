@@ -27,7 +27,7 @@ export interface ApiMeta {
   params?: ApiParam[];
 }
 
-export interface HandlerContext {
+export interface EndpointCtx {
   req: Request;
   res: Response;
   app: Application;
@@ -36,11 +36,10 @@ export interface HandlerContext {
   logger: Logger;
 }
 
-export type ApiHandler = (ctx: HandlerContext) => unknown | Promise<unknown>;
+export type ApiHandler = (ctx: EndpointCtx) => unknown | Promise<unknown>;
 
 export interface ApiModule {
   meta: ApiMeta;
-  onStart?: ApiHandler;
   initialize?: ApiHandler;
 }
 

@@ -26,7 +26,7 @@ import { writeFileSync, unlinkSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { randomBytes } from 'node:crypto';
-import type { ApiHandler, ApiMeta } from '@/engine/types.js';
+import type { ApiHandler, ApiMeta, EndpointCtx } from '@/engine/types.js';
 import { env } from '@/engine/env.config.js';
 
 type Rgb = [number, number, number];
@@ -793,7 +793,7 @@ function drawAvatar(ctx: SKRSContext2D, image: LoadedImage | null, cx: number, c
 
 // ─── Handler ────────────────────────────────────────────────────────────────
 
-export const onStart: ApiHandler = async ({ req, res }) => {
+export async function initialize({ req, res }: EndpointCtx) {
   const body = (req.method === 'POST' ? req.body : req.query) as Record<string, unknown>;
 
   const eventType = resolveEventType(body?.type);

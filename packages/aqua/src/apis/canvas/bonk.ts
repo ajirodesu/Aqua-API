@@ -3,7 +3,7 @@ import { writeFileSync, unlinkSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { randomBytes } from 'node:crypto';
-import type { ApiHandler, ApiMeta } from '@/engine/types.js';
+import type { ApiHandler, ApiMeta, EndpointCtx } from '@/engine/types.js';
 
 export const meta: ApiMeta = {
   name: 'Bonk',
@@ -75,7 +75,7 @@ async function loadAvatarImage(source: string, prefix: string): Promise<ReturnTy
   }
 }
 
-export const onStart: ApiHandler = async ({ req, res }) => {
+export async function initialize({ req, res }: EndpointCtx) {
   const avatar1: string | undefined =
     req.method === 'POST' ? req.body?.avatar1 : (req.query?.avatar1 as string); // sender — bonker (left)
   const avatar2: string | undefined =

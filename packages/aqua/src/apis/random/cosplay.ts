@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { ApiHandler, ApiMeta } from '@/engine/types.js';
+import type { ApiHandler, ApiMeta, EndpointCtx } from '@/engine/types.js';
 import { logger } from '../../engine/logger.js';
 
 export const meta: ApiMeta = {
@@ -10,7 +10,7 @@ export const meta: ApiMeta = {
   params: [],
 };
 
-export const onStart: ApiHandler = async ({ res }) => {
+export async function initialize({ res }: EndpointCtx) {
   try {
     const owner = 'ajirodesu';
     const repo = 'cosplay';

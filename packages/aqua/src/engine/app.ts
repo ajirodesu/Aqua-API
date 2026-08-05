@@ -135,8 +135,8 @@ app.use(
 
 /**
  * Recursively scans a directory for endpoint modules and mounts them onto
- * the Express app. Each module must export `meta` plus an `onStart` (or
- * legacy `initialize`) handler. Category is derived from the folder
+ * the Express app. Each module must export `meta` plus an `initialize`
+ * handler. Category is derived from the folder
  * structure unless overridden in `meta.category`.
  */
 async function loadEndpointsFromDirectory(
@@ -178,11 +178,11 @@ async function loadEndpointsFromDirectory(
       const modImport = (await import(itemURL)) as ApiModule & { default?: ApiModule };
       const mod = modImport.default ?? modImport;
 
-      const handler = mod?.onStart ?? mod?.initialize;
+      const handler = mod?.initialize;
       const meta = mod?.meta;
 
       if (typeof handler !== 'function' || !meta) {
-        logger.warn(`Skipped ${item.name} because no meta/onStart() was found`);
+        logger.warn(`Skipped ${item.name} because no meta/initialize() was found`);
         continue;
       }
 

@@ -1,5 +1,5 @@
 import Shoti from 'shoti';
-import type { ApiHandler, ApiMeta, AquaConfig } from '@/engine/types.js';
+import type { ApiHandler, ApiMeta, AquaConfig, EndpointCtx } from '@/engine/types.js';
 import { env } from '@/engine/env.config.js';
 import { logger } from '../../engine/logger.js';
 
@@ -57,7 +57,7 @@ export const meta: ApiMeta = {
   ],
 };
 
-export const onStart: ApiHandler = async ({ req, res, config }) => {
+export async function initialize({ req, res, config }: EndpointCtx) {
   const body = (req.method === 'POST' ? req.body : req.query) as Record<string, unknown>;
   const type = resolveType(body?.type);
   const shoti = getClient(config);

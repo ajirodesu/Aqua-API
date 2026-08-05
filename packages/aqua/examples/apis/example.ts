@@ -1,4 +1,4 @@
-import type { ApiHandler, ApiMeta } from '@/engine/types.js';
+import type { ApiHandler, ApiMeta, EndpointCtx } from '@/engine/types.js';
 
 export const meta: ApiMeta = {
   name: 'Example',
@@ -16,7 +16,7 @@ export const meta: ApiMeta = {
   ],
 };
 
-export const onStart: ApiHandler = async ({ req, res }) => {
+export async function initialize({ req, res }: EndpointCtx) {
   const text: string | undefined = req.method === 'POST' ? req.body?.text : req.query?.text as string;
 
   if (!text) {

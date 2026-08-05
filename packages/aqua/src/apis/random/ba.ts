@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { ApiHandler, ApiMeta } from '@/engine/types.js';
+import type { ApiHandler, ApiMeta, EndpointCtx } from '@/engine/types.js';
 
 export const meta: ApiMeta = {
   name: 'Blue Archive',
@@ -8,7 +8,7 @@ export const meta: ApiMeta = {
   category: 'random',
 };
 
-export const onStart: ApiHandler = async ({ res }) => {
+export async function initialize({ res }: EndpointCtx) {
   try {
     const { data } = await axios.get<string[]>(
       'https://raw.githubusercontent.com/rynxzyy/blue-archive-r-img/refs/heads/main/links.json'
