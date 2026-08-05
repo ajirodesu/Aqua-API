@@ -4,6 +4,7 @@
 .env.local
 .replit
 .vite/
+.vscode/
 node_modules/
 package-lock.json
 packages/aqua/dist/
