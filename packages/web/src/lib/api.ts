@@ -1,12 +1,13 @@
 import type { AquaConfig, EndpointBucket } from './types';
 
 /**
- * In development, Vite serves the frontend on :5173 while the Express
+ * In development, Vite serves the frontend on :5173 while the Elysia
  * backend (and all dynamically-loaded endpoints) run on :3000. Meta routes
  * (/api/*) are proxied by Vite, but dynamically mounted endpoint routes
  * (e.g. /random/blue-archive) are not — so we call those against the
  * backend's absolute origin directly. In production the app is served by
- * Express itself, so everything is same-origin and this collapses to ''.
+ * the Elysia backend itself, so everything is same-origin and this
+ * collapses to ''.
  */
 export const API_ORIGIN: string = import.meta.env.DEV ? 'http://localhost:3000' : '';
 

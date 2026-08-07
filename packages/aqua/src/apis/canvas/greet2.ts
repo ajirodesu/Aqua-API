@@ -793,8 +793,9 @@ function drawAvatar(ctx: SKRSContext2D, image: LoadedImage | null, cx: number, c
 
 // ─── Handler ────────────────────────────────────────────────────────────────
 
-export async function initialize({ req, res }: EndpointCtx) {
-  const body = (req.method === 'POST' ? req.body : req.query) as Record<string, unknown>;
+export async function initialize(ctx: EndpointCtx) {
+  const { request, query, set } = ctx;
+  const body = (request.method === 'POST' ? (ctx.body ?? {}) : query) as Record<string, unknown>;
 
   const eventType = resolveEventType(body?.type);
   const platform = resolvePlatform(body?.platform);
@@ -805,7 +806,8 @@ export async function initialize({ req, res }: EndpointCtx) {
   const username = typeof body?.username === 'string' ? body.username : undefined;
 
   if (!username) {
-    return res.status(400).json({ error: 'Missing required parameter: username' });
+    set.status = 400;
+    return { error: 'Missing required parameter: username' };
   }
 
   const serverName = typeof body?.serverName === 'string' && body.serverName.trim() ? body.serverName.trim() : null;
@@ -818,10 +820,11 @@ export async function initialize({ req, res }: EndpointCtx) {
   try {
     color = resolveColor(body?.color, defaultColor);
   } catch (err) {
-    return res.status(400).json({
+    set.status = 400;
+    return {
       error: (err as Error).message,
       allowedColors: NAMED_COLORS.map((c) => c.name),
-    });
+    };
   }
 
   try {
@@ -1007,8 +1010,11 @@ export async function initialize({ req, res }: EndpointCtx) {
     }
 
     const bufferArr = await canvas.encode('png');
-    res.type('image/png').send(Buffer.from(bufferArr));
+    return new Response(new Uint8Array(bufferArr), {
+      headers: { 'content-type': 'image/png', 'cache-control': 'public, max-age=86400' },
+    });
   } catch (error) {
-    return res.status(500).json({ error: (error as Error).message || 'Internal server error' });
+    set.status = 500;
+    return { error: (error as Error).message || 'Internal server error' };
   }
 };

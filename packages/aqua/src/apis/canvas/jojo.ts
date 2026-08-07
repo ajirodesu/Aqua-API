@@ -35,11 +35,16 @@ function resolveImageSource(image: string): string | Buffer {
   return image;
 }
 
-export async function initialize({ req, res }: EndpointCtx) {
-  const image: string | undefined = req.method === 'POST' ? req.body?.image : (req.query?.image as string);
+export async function initialize(ctx: EndpointCtx) {
+  const { request, query, set } = ctx;
+  const body = (request.method === 'POST' ? (ctx.body ?? {}) : ({})) as Record<string, unknown>;
+
+  const image: string | undefined =
+    request.method === 'POST' ? (body?.image as string) : (query?.image as string);
 
   if (!image) {
-    return res.status(400).json({ error: 'Missing required parameter: image' });
+    set.status = 400;
+    return { error: 'Missing required parameter: image' };
   }
 
   try {
@@ -59,9 +64,10 @@ export async function initialize({ req, res }: EndpointCtx) {
     ctx.drawImage(bg, 0, 0, 600, 337);
 
     const bufferArr = await canvas.encode('png');
-    res.type('image/png').send(Buffer.from(bufferArr));
+    return new Response(new Uint8Array(bufferArr), { headers: { 'content-type': 'image/png' } });
   } catch (error) {
-    return res.status(500).json({ error: (error as Error).message || 'Internal server error' });
+    set.status = 500;
+    return { error: (error as Error).message || 'Internal server error' };
   }
 };
 

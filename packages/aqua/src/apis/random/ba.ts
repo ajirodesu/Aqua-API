@@ -8,7 +8,8 @@ export const meta: ApiMeta = {
   category: 'random',
 };
 
-export async function initialize({ res }: EndpointCtx) {
+export async function initialize(ctx: EndpointCtx) {
+  const { set } = ctx;
   try {
     const { data } = await axios.get<string[]>(
       'https://raw.githubusercontent.com/rynxzyy/blue-archive-r-img/refs/heads/main/links.json'
@@ -18,12 +19,9 @@ export async function initialize({ res }: EndpointCtx) {
     const response = await axios.get(imageUrl, { responseType: 'arraybuffer' });
     const imgBuffer = Buffer.from(response.data);
 
-    res.writeHead(200, {
-      'Content-Type': 'image/png',
-      'Content-Length': imgBuffer.length,
-    });
-    res.end(imgBuffer);
+    return new Response(new Uint8Array(imgBuffer), { status: 200, headers: { 'content-type': 'image/png' } });
   } catch (error) {
-    res.status(500).json({ status: false, error: (error as Error).message });
+    set.status = 500;
+    return { status: false, error: (error as Error).message };
   }
 };

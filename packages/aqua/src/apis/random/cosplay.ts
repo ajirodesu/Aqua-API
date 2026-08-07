@@ -10,7 +10,8 @@ export const meta: ApiMeta = {
   params: [],
 };
 
-export async function initialize({ res }: EndpointCtx) {
+export async function initialize(ctx: EndpointCtx) {
+  const { set } = ctx;
   try {
     const owner = 'ajirodesu';
     const repo = 'cosplay';
@@ -29,15 +30,17 @@ export async function initialize({ res }: EndpointCtx) {
     }
 
     if (videoFiles.length === 0) {
-      return res.status(404).json({ error: 'No videos found in the repository' });
+      set.status = 404;
+      return { error: 'No videos found in the repository' };
     }
 
     const randomVideo = videoFiles[Math.floor(Math.random() * videoFiles.length)];
     const videoUrl = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${randomVideo}`;
 
-    res.json({ videoUrl });
+    return { videoUrl };
   } catch (error) {
     logger.error(`Error fetching random video: ${(error as Error).message}`);
-    res.status(500).json({ error: 'Failed to fetch random video' });
+    set.status = 500;
+    return { error: 'Failed to fetch random video' };
   }
 };

@@ -1,4 +1,4 @@
-import type { Application, Request, Response } from 'express';
+import type { Context } from 'elysia';
 
 /** HTTP verbs supported by the dynamic endpoint loader. */
 export type HttpMethod = 'get' | 'post' | 'put' | 'delete' | 'patch';
@@ -24,17 +24,34 @@ export interface ApiMeta {
   desc: string;
   method: HttpMethod | HttpMethod[];
   category: string;
+  version?: string;
+  author?: string;
+  usage?: string;
+  cooldown?: number;
   params?: ApiParam[];
 }
 
-export interface EndpointCtx {
-  req: Request;
-  res: Response;
-  app: Application;
+/** Singleton that the Elysia app decorates onto every route handler's context. */
+export type AppDecorators = {
   config: AquaConfig;
-  meta: ApiMeta;
   logger: Logger;
-}
+} & Record<string, unknown>;
+
+/**
+ * Every endpoint handler receives this single object (Cat-Bot style) — it is
+ * Elysia's real `Context`, decorated with `config` and `logger`. Handlers use
+ * `ctx.query` / `ctx.body` / `ctx.request` / `ctx.set` and return Elysia values
+ * (`new Response(...)`, plain objects, `set.status = 400`, etc.).
+ */
+export type EndpointCtx = Context<
+  Record<string, unknown>,
+  {
+    decorator: AppDecorators;
+    store: {};
+    derive: {};
+    resolve: {};
+  }
+>;
 
 export type ApiHandler = (ctx: EndpointCtx) => unknown | Promise<unknown>;
 
