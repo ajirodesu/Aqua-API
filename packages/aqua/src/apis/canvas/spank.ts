@@ -42,18 +42,16 @@ function resolveImageSource(image: string): string | Buffer {
   return image;
 }
 
-export async function initialize(ctx: EndpointCtx) {
-  const { request, query, set } = ctx;
-  const body = (request.method === 'POST' ? (ctx.body ?? {}) : ({})) as Record<string, unknown>;
-
+export async function initialize({ req, res }: EndpointCtx) {
   const image1: string | undefined =
-    request.method === 'POST' ? (body?.image1 as string) : query.image1;
+    req.method === 'POST' ? req.body?.image1 : (req.query?.image1 as string);
   const image2: string | undefined =
-    request.method === 'POST' ? (body?.image2 as string) : query.image2;
+    req.method === 'POST' ? req.body?.image2 : (req.query?.image2 as string);
 
   if (!image1 || !image2) {
-    set.status = 400;
-    return { error: 'Missing required parameters: image1 and image2 are required' };
+    return res
+      .status(400)
+      .json({ error: 'Missing required parameters: image1 and image2 are required' });
   }
 
   try {
@@ -128,9 +126,9 @@ export async function initialize(ctx: EndpointCtx) {
     // Encode lossless PNG buffer
     const bufferArr = await canvas.encode('png');
 
-    return new Response(new Uint8Array(bufferArr), { headers: { 'content-type': 'image/png', 'cache-control': 'public, max-age=86400' } });
+    res.setHeader('Cache-Control', 'public, max-age=86400');
+    res.type('image/png').send(Buffer.from(bufferArr));
   } catch (error) {
-    set.status = 500;
-    return { error: (error as Error).message || 'Internal server error' };
+    return res.status(500).json({ error: (error as Error).message || 'Internal server error' });
   }
 };

@@ -57,9 +57,8 @@ export const meta: ApiMeta = {
   ],
 };
 
-export async function initialize(ctx: EndpointCtx) {
-  const { request, query, set, config } = ctx;
-  const body = (request.method === 'POST' ? (ctx.body ?? {}) : query) as Record<string, unknown>;
+export async function initialize({ req, res, config }: EndpointCtx) {
+  const body = (req.method === 'POST' ? req.body : req.query) as Record<string, unknown>;
   const type = resolveType(body?.type);
   const shoti = getClient(config);
 
@@ -71,23 +70,21 @@ export async function initialize(ctx: EndpointCtx) {
     const result = await shoti.getShoti({ type: type === 'photo' ? 'image' : 'video' });
 
     if ('error' in result) {
-      set.status = 502;
-      return { error: result.error, code: result.code };
+      return res.status(502).json({ error: result.error, code: result.code });
     }
 
     const { user, content, type: resultType, ...rest } = result;
     const media = Array.isArray(content) ? content : [content];
 
-    return {
+    return res.json({
       type,
       shotiType: resultType,
       user,
       media,
       ...rest,
-    };
+    });
   } catch (error) {
     logger.error(`Error fetching shoti (${type}): ${(error as Error).message}`);
-    set.status = 500;
-    return { error: (error as Error).message || 'Internal server error' };
+    return res.status(500).json({ error: (error as Error).message || 'Internal server error' });
   }
 };

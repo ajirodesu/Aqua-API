@@ -2,24 +2,21 @@
 // any other module (including env.config.ts) reads it.
 import './load-env.js';
 
-import { Elysia } from 'elysia';
-import { node } from '@elysiajs/node';
-import { promises as fsPromises, statSync } from 'node:fs';
+import express from 'express';
 import fs from 'node:fs';
+import { promises as fsPromises } from 'node:fs';
 import path from 'node:path';
+import compression from 'compression';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { networkInterfaces } from 'node:os';
-import { brotliCompressSync, gzipSync } from 'node:zlib';
 import chalk from 'chalk';
 
 import { logger } from './logger.js';
 import { env, validateEnv } from './env.config.js';
 import type {
   AquaConfig,
-  ApiMeta,
   ApiModule,
   EndpointBucket,
-  EndpointCtx,
   HttpMethod,
   Notification,
 } from './types.js';
@@ -27,6 +24,9 @@ import type {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// __dirname is now src/engine (or dist/engine when compiled) — one extra
+// level deeper than before, so paths up to the package/monorepo root and
+// across to sibling src folders (apis/, json/) need one more "..".
 const SRC_DIR = path.resolve(__dirname, '..');
 const PACKAGE_DIR = path.resolve(SRC_DIR, '..');
 const PACKAGES_DIR = path.resolve(PACKAGE_DIR, '..');
@@ -36,6 +36,7 @@ const JSON_DIR = path.join(SRC_DIR, 'json');
 const NOTIF_PATH = path.join(JSON_DIR, 'notif.json');
 const CONFIG_PATH = path.join(JSON_DIR, 'config.json');
 
+const app = express();
 const PORT = env.PORT;
 const isProduction = env.isProduction;
 
@@ -43,11 +44,10 @@ validateEnv();
 
 const config: AquaConfig = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'));
 
-const frontendBuilt = fs.existsSync(path.join(WEB_DIST_DIR, 'index.html'));
-if (frontendBuilt) {
-  logger.ready(`Serving frontend from ${WEB_DIST_DIR}`);
-} else {
-  logger.warn(`Frontend build not found at ${WEB_DIST_DIR} — run "npm run build" from the repo root.`);
+declare module 'express-serve-static-core' {
+  interface Request {
+    startTime?: number;
+  }
 }
 
 let notificationsCache: Notification[] = [];
@@ -75,28 +75,69 @@ async function saveNotifications(): Promise<void> {
   }
 }
 
-/** A dynamically-discovered endpoint module (kept in the resolved module shape). */
-interface EndpointModule {
-  meta: ApiMeta;
-  initialize: (ctx: EndpointCtx) => unknown | Promise<unknown>;
+logger.info('Starting server initialization...');
+
+app.set('trust proxy', true);
+app.set('json spaces', isProduction ? 0 : 2);
+
+app.use(
+  compression({
+    threshold: 1024,
+    level: isProduction ? 9 : 6,
+  })
+);
+
+app.use((req, _res, next) => {
+  req.startTime = Date.now();
+  next();
+});
+
+app.use((req, res, next) => {
+  const originalJson = res.json.bind(res);
+
+  res.json = ((data: unknown) => {
+    const timestamp = new Date().toISOString();
+    const responseTime = `${Date.now() - (req.startTime ?? Date.now())}ms`;
+
+    if (data && typeof data === 'object' && !Array.isArray(data)) {
+      return originalJson({
+        operator: config.operator || '',
+        timestamp,
+        responseTime,
+        ...(data as Record<string, unknown>),
+      });
+    }
+
+    return originalJson(data as never);
+  }) as typeof res.json;
+
+  next();
+});
+
+app.use(express.json({ limit: '15mb' }));
+app.use(express.urlencoded({ extended: false, limit: '15mb' }));
+
+if (!fs.existsSync(path.join(WEB_DIST_DIR, 'index.html'))) {
+  logger.warn(`Frontend build not found at ${WEB_DIST_DIR} — run "npm run build" from the repo root.`);
+} else {
+  logger.ready(`Serving frontend from ${WEB_DIST_DIR}`);
 }
 
-interface ResolvedRoute {
-  method: HttpMethod;
-  route: string;
-  module: EndpointModule;
-}
-
-const resolvedRoutes: ResolvedRoute[] = [];
-let allEndpoints: EndpointBucket[] = [];
-let totalEndpoints = 0;
-
-const SUPPORTED_METHODS: HttpMethod[] = ['get', 'post', 'put', 'delete', 'patch'];
+// Serve the compiled React frontend (Vite build output) as static assets.
+app.use(
+  express.static(WEB_DIST_DIR, {
+    maxAge: isProduction ? 86400000 : 0,
+    etag: true,
+    lastModified: true,
+    index: false,
+  })
+);
 
 /**
- * Recursively scans a directory for endpoint modules. Each module must
- * export `meta` plus an `initialize` handler. Category is derived from the
- * folder structure unless overridden in `meta.category`.
+ * Recursively scans a directory for endpoint modules and mounts them onto
+ * the Express app. Each module must export `meta` plus an `initialize`
+ * handler. Category is derived from the folder
+ * structure unless overridden in `meta.category`.
  */
 async function loadEndpointsFromDirectory(
   directory: string,
@@ -119,6 +160,7 @@ async function loadEndpointsFromDirectory(
 
     if (item.isDirectory()) {
       const subCategory = categoryPath ? `${categoryPath}/${item.name}` : item.name;
+      logger.info(`Found subdirectory: ${item.name}`);
       const nested = await loadEndpointsFromDirectory(itemPath, subCategory);
       endpoints.push(...nested);
       continue;
@@ -154,16 +196,22 @@ async function loadEndpointsFromDirectory(
         : [meta.method || 'get'];
 
       for (const method of methods) {
-        const lower = String(method).toLowerCase() as HttpMethod;
-        if (!SUPPORTED_METHODS.includes(lower)) {
+        const expressMethod = String(method).toLowerCase() as keyof express.Application;
+        if (typeof app[expressMethod] !== 'function') {
           logger.warn(`Unsupported method "${method}" in ${item.name}`);
           continue;
         }
-        resolvedRoutes.push({
-          method: lower,
+
+        (app[expressMethod] as (path: string, handler: express.RequestHandler) => void)(
           route,
-          module: { meta, initialize: handler },
-        });
+          async (req, res, next) => {
+            try {
+              await handler({ req, res, app, config, meta, logger });
+            } catch (err) {
+              next(err);
+            }
+          }
+        );
       }
 
       let displayPath = route;
@@ -193,11 +241,66 @@ async function loadEndpointsFromDirectory(
 }
 
 logger.info('Loading API endpoints...');
-allEndpoints = await loadEndpointsFromDirectory(APIS_DIR);
-totalEndpoints = allEndpoints.reduce((total, cat) => total + cat.items.length, 0);
+const allEndpoints = await loadEndpointsFromDirectory(APIS_DIR);
+const totalEndpoints = allEndpoints.reduce((total, cat) => total + cat.items.length, 0);
 logger.ready(`Loaded ${totalEndpoints} endpoints`);
 
-await loadNotifications();
+app.get('/api/endpoints', (_req, res) => {
+  res.json({
+    status: true,
+    count: totalEndpoints,
+    endpoints: allEndpoints,
+  });
+});
+
+app.get('/api/config', (_req, res) => {
+  res.json({
+    status: true,
+    ...config,
+    notification: notificationsCache,
+  });
+});
+
+app.get('/api/notifications', (_req, res) => {
+  res.json({ notifications: notificationsCache });
+});
+
+app.post('/api/notification', async (req, res) => {
+  const apiKey = env.API_KEY || config.key;
+
+  if (req.headers.authorization !== apiKey) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  const { message, clear, firstName } = req.body ?? {};
+
+  if (clear) {
+    notificationsCache = [];
+    await saveNotifications();
+    return res.json({ success: true, cleared: true });
+  }
+
+  if (!message) {
+    return res.status(400).json({ error: 'Missing message' });
+  }
+
+  const newNotif: Notification = {
+    id: Date.now(),
+    title: `From Developer ${firstName || ''}`.trim(),
+    message: String(message).trim(),
+    createdAt: Date.now(),
+  };
+
+  notificationsCache.push(newNotif);
+  await saveNotifications();
+
+  res.json({ success: true });
+});
+
+/** True when the request is a browser/WebView navigation expecting an HTML page. */
+function wantsHtml(req: express.Request): boolean {
+  return req.method === 'GET' && req.accepts(['html', 'json']) === 'html';
+}
 
 function isKnownApiPath(reqPath: string): boolean {
   return (
@@ -205,33 +308,6 @@ function isKnownApiPath(reqPath: string): boolean {
     allEndpoints.some((bucket) => bucket.items.some((item) => reqPath === item.path.split('?')[0]))
   );
 }
-
-function wantsHtml(request: Request): boolean {
-  if (request.method !== 'GET') return false;
-  const accept = request.headers.get('accept') ?? '';
-  return accept.includes('text/html') && !accept.includes('application/json');
-}
-
-const MIME_TYPES: Record<string, string> = {
-  '.html': 'text/html; charset=utf-8',
-  '.js': 'text/javascript; charset=utf-8',
-  '.mjs': 'text/javascript; charset=utf-8',
-  '.css': 'text/css; charset=utf-8',
-  '.json': 'application/json; charset=utf-8',
-  '.svg': 'image/svg+xml',
-  '.png': 'image/png',
-  '.jpg': 'image/jpeg',
-  '.jpeg': 'image/jpeg',
-  '.gif': 'image/gif',
-  '.webp': 'image/webp',
-  '.ico': 'image/x-icon',
-  '.woff': 'font/woff',
-  '.woff2': 'font/woff2',
-  '.ttf': 'font/ttf',
-  '.otf': 'font/otf',
-  '.map': 'application/json',
-  '.txt': 'text/plain; charset=utf-8',
-};
 
 const MISSING_BUILD_HTML = `<!doctype html>
 <html lang="en">
@@ -246,177 +322,55 @@ npm run build</pre>
 </body>
 </html>`;
 
-function notFoundHtml(p: string): string {
-  return `<!doctype html><html lang="en"><head><meta charset="utf-8" /><title>Not found</title></head><body style="font-family:-apple-system,system-ui,sans-serif;max-width:480px;margin:96px auto;text-align:center;color:#1e293b;"><h1>Page not found</h1><p>${p} doesn't exist.</p><a href="/" style="color:#0ab4e8;">Go back home</a></body></html>`;
-}
+// SPA fallback: any non-API, non-endpoint GET request serves the React app
+// so that client-side routes (e.g. /docs/random/blue-archive) work on refresh.
+app.use((req, res, next) => {
+  if (req.method !== 'GET') return next();
+  if (isKnownApiPath(req.path)) return next();
 
-const STATIC_CACHE = (ext: string): string =>
-  isProduction
-    ? ext === '.html' || ext === '.js' || ext === '.css' || ext === '.map'
-      ? 'public, max-age=0'
-      : 'public, max-age=86400'
-    : 'no-cache';
-
-/** Serves a file from the web dist directory, with SPA fallback. Returns null when nothing matches. */
-async function serveStatic(urlPath: string): Promise<Response | null> {
-  if (!frontendBuilt) {
-    return new Response(MISSING_BUILD_HTML, { status: 503, headers: { 'content-type': 'text/html' } });
+  const indexPath = path.join(WEB_DIST_DIR, 'index.html');
+  if (fs.existsSync(indexPath)) {
+    return res.sendFile(indexPath);
   }
 
-  // Only serve paths that resolve inside the web dist directory.
-  const resolved = path.resolve(WEB_DIST_DIR, '.' + urlPath);
-  if (!resolved.startsWith(path.resolve(WEB_DIST_DIR))) {
-    return null;
+  if (wantsHtml(req)) {
+    return res.status(503).type('html').send(MISSING_BUILD_HTML);
   }
 
-  let filePath = resolved;
-  let data: Buffer | null = null;
-  try {
-    const stat = statSync(filePath);
-    if (stat.isDirectory()) {
-      filePath = path.join(filePath, 'index.html');
-    }
-    data = await fsPromises.readFile(filePath);
-  } catch {
-    data = null;
-  }
-
-  // If we couldn't read the resolved file path directly, try the SPA fallback.
-  if (data === null) {
-    const indexPath = path.join(WEB_DIST_DIR, 'index.html');
-    if (existsFile(indexPath)) {
-      data = await fsPromises.readFile(indexPath);
-      return new Response(new Uint8Array(data), {
-        status: 200,
-        headers: { 'content-type': MIME_TYPES['.html'], 'cache-control': STATIC_CACHE('.html') },
-      });
-    }
-    return null;
-  }
-
-  const ext = path.extname(filePath).toLowerCase();
-  const contentType = MIME_TYPES[ext] ?? 'application/octet-stream';
-  return new Response(new Uint8Array(data), {
-    headers: { 'content-type': contentType, 'cache-control': STATIC_CACHE(ext) },
-  });
-}
-
-function existsFile(p: string): boolean {
-  try {
-    return statSync(p).isFile();
-  } catch {
-    return false;
-  }
-}
-
-/** Compresses an already-buffered text/json response with gzip or brotli. */
-async function compressResponse(response: Response, request: Request): Promise<Response> {
-  const accept = request.headers.get('accept-encoding') ?? '';
-  const type = response.headers.get('content-type') ?? '';
-  const len = Number(response.headers.get('content-length') ?? 0);
-
-  const compressesText =
-    type.startsWith('text/') ||
-    type.includes('json') ||
-    type.includes('javascript') ||
-    type.includes('xml') ||
-    type.includes('svg');
-
-  if (!compressesText || (len > 0 && len < 1024)) return response;
-  if (response.status === 204 || response.status === 304) return response;
-
-  const acceptsBrotli = accept.includes('br');
-  const acceptsGzip = /\bgzip\b/.test(accept);
-
-  if (!acceptsBrotli && !acceptsGzip) return response;
-
-  const buf = Buffer.from(await response.arrayBuffer());
-  if (!buf.length) return response;
-
-  const headers = new Headers(response.headers);
-  headers.delete('content-length');
-  headers.set('content-encoding', acceptsBrotli ? 'br' : 'gzip');
-  headers.set('vary', 'Accept-Encoding');
-
-  const compressed = acceptsBrotli ? brotliCompressSync(buf) : gzipSync(buf);
-  headers.set('content-length', String(compressed.length));
-  return new Response(new Uint8Array(compressed), { status: response.status, headers });
-}
-
-logger.info('Building Elysia application...');
-const app = new Elysia({ adapter: node() })
-  .decorate('config', config)
-  .decorate('logger', logger);
-
-// ---- Core meta endpoints ----
-app
-  .get('/api/endpoints', () => ({
-    status: true,
-    count: totalEndpoints,
-    endpoints: allEndpoints,
-  }))
-  .get('/api/config', () => ({
-    status: true,
-    ...config,
-    notification: notificationsCache,
-  }))
-  .get('/api/notifications', () => ({ notifications: notificationsCache }))
-  .post('/api/notification', async (ctx) => {
-    const apiKey = env.API_KEY || config.key;
-    const body = (typeof ctx.body === 'object' && ctx.body !== null ? ctx.body : {}) as Record<string, any>;
-
-    if (ctx.request.headers.get('authorization') !== apiKey) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { 'content-type': 'application/json' } });
-    }
-
-    const { message, clear, firstName } = body;
-
-    if (clear) {
-      notificationsCache = [];
-      await saveNotifications();
-      return { success: true, cleared: true };
-    }
-
-    if (!message) {
-      return new Response(JSON.stringify({ error: 'Missing message' }), { status: 400, headers: { 'content-type': 'application/json' } });
-    }
-
-    const newNotif: Notification = {
-      id: Date.now(),
-      title: `From Developer ${firstName || ''}`.trim(),
-      message: String(message).trim(),
-      createdAt: Date.now(),
-    };
-
-    notificationsCache.push(newNotif);
-    await saveNotifications();
-
-    return { success: true };
-  });
-
-// ---- Dynamically mount each endpoint module onto Elysia ----
-for (const def of resolvedRoutes) {
-  const method = def.method.toUpperCase() as 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
-  app.route(method, def.route, (ctx) => def.module.initialize(ctx as EndpointCtx));
-}
-
-// ---- Static assets + SPA fallback (registered last so real routes win) ----
-app.get('*', async ({ request }) => {
-  const url = new URL(request.url);
-
-  if (isKnownApiPath(url.pathname)) {
-    return new Response(JSON.stringify({ status: false, error: 'Not found' }), { status: 404, headers: { 'content-type': 'application/json' } });
-  }
-
-  const staticFile = await serveStatic(url.pathname);
-  if (staticFile) return compressResponse(staticFile, request);
-
-  if (wantsHtml(request)) {
-    return new Response(notFoundHtml(url.pathname), { status: 404, headers: { 'content-type': 'text/html' } });
-  }
-
-  return new Response(JSON.stringify({ status: false, error: 'Not found' }), { status: 404, headers: { 'content-type': 'application/json' } });
+  return next();
 });
+
+app.use((req, res) => {
+  logger.info(`404: ${req.method} ${req.path}`);
+
+  if (wantsHtml(req) && !isKnownApiPath(req.path)) {
+    return res
+      .status(404)
+      .type('html')
+      .send(
+        `<!doctype html><html lang="en"><head><meta charset="utf-8" /><title>Not found</title></head><body style="font-family:-apple-system,system-ui,sans-serif;max-width:480px;margin:96px auto;text-align:center;color:#1e293b;"><h1>Page not found</h1><p>${req.path} doesn't exist.</p><a href="/" style="color:#0ab4e8;">Go back home</a></body></html>`
+      );
+  }
+
+  res.status(404).json({ status: false, error: 'Not found' });
+});
+
+app.use((err: Error, req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  logger.error(`500: ${err.message}`);
+
+  if (wantsHtml(req)) {
+    return res
+      .status(500)
+      .type('html')
+      .send(
+        `<!doctype html><html lang="en"><head><meta charset="utf-8" /><title>Server error</title></head><body style="font-family:-apple-system,system-ui,sans-serif;max-width:480px;margin:96px auto;text-align:center;color:#1e293b;"><h1>Something went wrong</h1><p>Please try again in a moment.</p></body></html>`
+      );
+  }
+
+  res.status(500).json({ status: false, error: 'Internal server error' });
+});
+
+await loadNotifications();
 
 app.listen(PORT, () => {
   logger.ready('Server started successfully');

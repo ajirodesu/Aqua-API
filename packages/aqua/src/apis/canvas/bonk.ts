@@ -75,22 +75,17 @@ async function loadAvatarImage(source: string, prefix: string): Promise<ReturnTy
   }
 }
 
-export async function initialize(ctx: EndpointCtx) {
-  const { request, query, set } = ctx;
-  const body = (request.method === 'POST' ? (ctx.body ?? {}) : ({})) as Record<string, unknown>;
-
+export async function initialize({ req, res }: EndpointCtx) {
   const avatar1: string | undefined =
-    request.method === 'POST' ? (body?.avatar1 as string) : (query?.avatar1 as string); // sender — bonker (left)
+    req.method === 'POST' ? req.body?.avatar1 : (req.query?.avatar1 as string); // sender — bonker (left)
   const avatar2: string | undefined =
-    request.method === 'POST' ? (body?.avatar2 as string) : (query?.avatar2 as string); // target — being bonked (right)
+    req.method === 'POST' ? req.body?.avatar2 : (req.query?.avatar2 as string); // target — being bonked (right)
 
   if (!avatar1) {
-    set.status = 400;
-    return { error: 'Missing required parameter: avatar1 (sender avatar)' };
+    return res.status(400).json({ error: 'Missing required parameter: avatar1 (sender avatar)' });
   }
   if (!avatar2) {
-    set.status = 400;
-    return { error: 'Missing required parameter: avatar2 (target avatar)' };
+    return res.status(400).json({ error: 'Missing required parameter: avatar2 (target avatar)' });
   }
 
   try {
@@ -132,9 +127,8 @@ export async function initialize(ctx: EndpointCtx) {
     c.restore();
 
     const bufferArr = await canvas.encode('png');
-    return new Response(new Uint8Array(bufferArr), { headers: { 'content-type': 'image/png' } });
+    res.type('image/png').send(Buffer.from(bufferArr));
   } catch (error) {
-    set.status = 500;
-    return { error: (error as Error).message || 'Internal server error' };
+    return res.status(500).json({ error: (error as Error).message || 'Internal server error' });
   }
 };

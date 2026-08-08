@@ -112,7 +112,7 @@ function resolveOption(value: unknown): Option {
   return normalized === 'add' ? 'add' : 'get';
 }
 
-/** Minimal, dependency-free URL validator. */
+/** Minimal, dependency-free stand-in for express-validator's `.isURL()`. */
 function isValidUrl(value: unknown): value is string {
   if (typeof value !== 'string' || !value.trim()) return false;
   try {
@@ -160,30 +160,26 @@ async function handleAdd(
   url: unknown,
   password: unknown,
   config: Parameters<ApiHandler>[0]['config'],
-  set: EndpointCtx['set']
+  res: Parameters<ApiHandler>[0]['res']
 ) {
   const apiKey = env.API_KEY || (config.key as string | undefined);
 
   if (!apiKey) {
     logger.warn('shoti3: API_KEY / config.key is not set — refusing all option=add requests until one is configured.');
-    set.status = 503;
-    return { code: 503, error: 'Adding videos is not configured on this server yet' };
+    return res.status(503).json({ code: 503, error: 'Adding videos is not configured on this server yet' });
   }
 
   if (typeof password !== 'string' || password !== apiKey) {
-    set.status = 401;
-    return { code: 401, error: 'Invalid or missing password' };
+    return res.status(401).json({ code: 401, error: 'Invalid or missing password' });
   }
 
   if (!env.GITHUB_TOKEN) {
     logger.warn('shoti3: GITHUB_TOKEN is not set — refusing all option=add requests until one is configured.');
-    set.status = 503;
-    return { code: 503, error: 'Gist editing is not configured on this server yet' };
+    return res.status(503).json({ code: 503, error: 'Gist editing is not configured on this server yet' });
   }
 
   if (!isValidUrl(url)) {
-    set.status = 400;
-    return { code: 400, error: 'A valid "url" is required' };
+    return res.status(400).json({ code: 400, error: 'A valid "url" is required' });
   }
 
   const trimmedUrl = url.trim();
@@ -194,8 +190,7 @@ async function handleAdd(
   const currentUrls = await fetchGistUrls();
 
   if (currentUrls.includes(trimmedUrl)) {
-    set.status = 400;
-    return { code: 400, error: 'Video already exists' };
+    return res.status(400).json({ code: 400, error: 'Video already exists' });
   }
 
   const updatedUrls = [...currentUrls, trimmedUrl];
@@ -214,14 +209,12 @@ async function handleAdd(
 
   urlsCache = updatedUrls;
 
-  set.status = 200;
-  return { code: 200, message: 'Video added successfully' };
+  return res.status(200).json({ code: 200, message: 'Video added successfully' });
 }
 
-async function handleGet(set: EndpointCtx['set']) {
+async function handleGet(res: Parameters<ApiHandler>[0]['res']) {
   if (urlsCache.length === 0) {
-    set.status = 404;
-    return { code: 404, error: 'No videos have been added yet' };
+    return res.status(404).json({ code: 404, error: 'No videos have been added yet' });
   }
 
   const randomIndex = Math.floor(Math.random() * urlsCache.length);
@@ -230,8 +223,7 @@ async function handleGet(set: EndpointCtx['set']) {
   const response = await axios.get(`https://tikwm.com/api?url=${encodeURIComponent(url)}`);
   const videoInfo = response.data;
 
-  set.status = 200;
-  return {
+  return res.status(200).json({
     code: 200,
     message: 'Video fetched successfully',
     data: {
@@ -249,28 +241,26 @@ async function handleGet(set: EndpointCtx['set']) {
         musicUrl: videoInfo.data?.music_info?.play,
       },
     },
-  };
+  });
 }
 
-export async function initialize(ctx: EndpointCtx) {
-  const { request, query, set, config } = ctx;
+export async function initialize({ req, res, config }: EndpointCtx) {
   await ensureRefreshLoop();
 
-  const body = (request.method === 'POST' ? (ctx.body ?? {}) : query) as Record<string, unknown>;
+  const body = (req.method === 'POST' ? req.body : req.query) as Record<string, unknown>;
   const option = resolveOption(body?.option);
 
   try {
     if (option === 'add') {
-      return await handleAdd(body?.url, body?.password, config, set);
+      return await handleAdd(body?.url, body?.password, config, res);
     }
-    return await handleGet(set);
+    return await handleGet(res);
   } catch (error) {
     logger.error(`shoti3 (${option}) error: ${(error as Error).message}`);
-    set.status = 500;
-    return {
+    return res.status(500).json({
       code: 500,
       message: option === 'add' ? 'Error adding video' : 'Failed to fetch video',
       error: (error as Error).message,
-    };
+    });
   }
 };

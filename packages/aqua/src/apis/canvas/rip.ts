@@ -35,16 +35,12 @@ function resolveImageSource(image: string): string | Buffer {
   return image;
 }
 
-export async function initialize(ctx: EndpointCtx) {
-  const { request, query, set } = ctx;
-  const body = (request.method === 'POST' ? (ctx.body ?? {}) : ({})) as Record<string, unknown>;
-
+export async function initialize({ req, res }: EndpointCtx) {
   const image: string | undefined =
-    request.method === 'POST' ? (body?.image as string) : (query?.image as string);
+    req.method === 'POST' ? req.body?.image : (req.query?.image as string);
 
   if (!image) {
-    set.status = 400;
-    return { error: 'Missing required parameter: image' };
+    return res.status(400).json({ error: 'Missing required parameter: image' });
   }
 
   try {
@@ -99,9 +95,9 @@ export async function initialize(ctx: EndpointCtx) {
     // Encode lossless PNG buffer
     const bufferArr = await canvas.encode('png');
 
-    return new Response(new Uint8Array(bufferArr), { headers: { 'content-type': 'image/png', 'cache-control': 'public, max-age=86400' } });
+    res.setHeader('Cache-Control', 'public, max-age=86400');
+    res.type('image/png').send(Buffer.from(bufferArr));
   } catch (error) {
-    set.status = 500;
-    return { error: (error as Error).message || 'Internal server error' };
+    return res.status(500).json({ error: (error as Error).message || 'Internal server error' });
   }
 };

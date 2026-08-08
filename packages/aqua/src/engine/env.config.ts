@@ -23,7 +23,7 @@ export interface EnvConfig {
   NODE_ENV: NodeEnv;
   /** True when NODE_ENV === "production". */
   isProduction: boolean;
-  /** Port the Elysia server listens on. Defaults to 3000. */
+  /** Port the Express server listens on. Defaults to 3000. */
   PORT: number;
 
   /** Shared secret required on `POST /api/notification`. Falls back to config.json's `key` field if unset. */

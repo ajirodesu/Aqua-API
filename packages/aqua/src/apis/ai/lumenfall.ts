@@ -35,23 +35,20 @@ export const meta: ApiMeta = {
   ],
 };
 
-export async function initialize(ctx: EndpointCtx) {
-  const { request, query, set, config } = ctx;
-  const body = (request.method === 'POST' ? (ctx.body ?? {}) : query) as Record<string, unknown>;
+export async function initialize({ req, res, config }: EndpointCtx) {
+  const body = (req.method === 'POST' ? req.body : req.query) as Record<string, unknown>;
   const prompt = typeof body?.prompt === 'string' ? body.prompt.trim() : '';
   const size = typeof body?.size === 'string' && body.size.trim() ? body.size.trim() : '1024x1024';
 
   if (!prompt) {
-    set.status = 400;
-    return { error: 'Missing required parameter: prompt' };
+    return res.status(400).json({ error: 'Missing required parameter: prompt' });
   }
 
   const apiKey = env.LUMENFALL_API || (config.lumenfallkey as string | undefined);
 
   if (!apiKey) {
     logger.warn('LUMENFALL_API / config.lumenfallkey is not set — the /ai/lumenfall endpoint cannot authenticate.');
-    set.status = 500;
-    return { error: 'Server is missing LUMENFALL_API credentials' };
+    return res.status(500).json({ error: 'Server is missing LUMENFALL_API credentials' });
   }
 
   try {
@@ -73,20 +70,17 @@ export async function initialize(ctx: EndpointCtx) {
     const imageUrl = data?.data?.[0]?.url;
 
     if (!imageUrl) {
-      set.status = 502;
-      return { error: 'Lumenfall API returned no image URL' };
+      return res.status(502).json({ error: 'Lumenfall API returned no image URL' });
     }
 
-    return { prompt, size, image: imageUrl };
+    return res.json({ prompt, size, image: imageUrl });
   } catch (error) {
     const err = error as { response?: { status?: number; data?: unknown }; message?: string };
     logger.error(`Error generating image (lumenfall): ${err.message}`);
 
-    const status = err.response?.status ?? 500;
-    set.status = status;
-    return {
+    return res.status(err.response?.status ?? 500).json({
       error: 'Failed to generate image',
       details: err.response?.data ?? err.message,
-    };
+    });
   }
 };
