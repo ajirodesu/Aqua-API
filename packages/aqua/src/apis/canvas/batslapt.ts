@@ -1,5 +1,4 @@
-import { createCanvas } from '@napi-rs/canvas';
-import { cachedLoadImage as loadImage } from '@/engine/image-cache.js';
+import { createCanvas, loadImage } from '@napi-rs/canvas';
 import type { ApiHandler, ApiMeta, EndpointCtx } from '@/engine/types.js';
 
 export const meta: ApiMeta = {

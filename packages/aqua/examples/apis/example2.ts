@@ -17,21 +17,17 @@ export const meta: ApiMeta = {
   ],
 };
 
-export async function initialize(ctx: EndpointCtx) {
-  const { request, query, set } = ctx;
-  const body = (request.method === 'POST' ? (ctx.body ?? {}) : query) as Record<string, unknown>;
-  const text = typeof body?.text === 'string' ? body.text.trim() : '';
+export async function initialize({ req, res }: EndpointCtx) {
+  const text: string | undefined = req.method === 'POST' ? req.body?.text : (req.query?.text as string);
 
   if (!text) {
-    set.status = 400;
-    return { error: 'Missing required parameter: text' };
+    return res.status(400).json({ error: 'Missing required parameter: text' });
   }
 
   try {
     const greeting = `Hello, ${text}! This is an example response.`;
-    return { message: greeting };
+    return res.json({ message: greeting });
   } catch (error) {
-    set.status = 500;
-    return { error: (error as Error).message || 'Internal server error' };
+    return res.status(500).json({ error: (error as Error).message || 'Internal server error' });
   }
 };
