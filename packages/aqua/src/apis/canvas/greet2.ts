@@ -22,9 +22,7 @@
  */
 
 import { createCanvas, loadImage, type SKRSContext2D } from '@napi-rs/canvas';
-import { writeFileSync, unlinkSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { cachedLoadRemoteImage } from '@/engine/image-cache.js';
 import { randomBytes } from 'node:crypto';
 import type { ApiHandler, ApiMeta, EndpointCtx } from '@/engine/types.js';
 import { env } from '@/engine/env.config.js';
@@ -356,53 +354,9 @@ export const meta: ApiMeta = {
 
 // ─── Image loading ──────────────────────────────────────────────────────────
 
-/**
- * Resolves an avatar/background param (remote URL or an uploaded `data:` URI
- * from the docs UI) down to a temp file and loads it with loadImage().
- * Returns null (rather than throwing) on any fetch/decode failure so the
- * card can fall back gracefully instead of erroring the whole request.
- */
+/** Cached remote/data-URI image loader — see engine/image-cache.ts. */
 async function loadRemoteImage(source: string, prefix: string): Promise<LoadedImage | null> {
-  try {
-    let buf: Buffer;
-    let ext = 'jpg';
-
-    if (source.startsWith('data:')) {
-      const commaIndex = source.indexOf(',');
-      if (commaIndex === -1) return null;
-      const mime = source.slice(5, commaIndex).split(';')[0] || 'image/jpeg';
-      ext = mime.split('/')[1]?.replace('jpeg', 'jpg').replace('svg+xml', 'svg') || 'jpg';
-      buf = Buffer.from(source.slice(commaIndex + 1), 'base64');
-    } else {
-      const res = await fetch(source);
-      if (!res.ok) return null;
-
-      const contentType = res.headers.get('content-type') ?? 'image/jpeg';
-      ext =
-        contentType
-          .split('/')[1]
-          ?.replace('jpeg', 'jpg')
-          ?.replace('svg+xml', 'svg')
-          ?.split(';')[0] || 'jpg';
-
-      buf = Buffer.from(await res.arrayBuffer());
-    }
-
-    const tmp = join(tmpdir(), `${prefix}_${randomBytes(8).toString('hex')}.${ext}`);
-    writeFileSync(tmp, buf);
-
-    try {
-      return await loadImage(tmp);
-    } finally {
-      try {
-        unlinkSync(tmp);
-      } catch {
-        /* ignore cleanup errors */
-      }
-    }
-  } catch {
-    return null;
-  }
+  return cachedLoadRemoteImage(source, prefix);
 }
 
 // ─── Dynamic background system (Pixabay → Unsplash → Picsum) ──────────────

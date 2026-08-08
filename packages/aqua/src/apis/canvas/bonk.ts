@@ -1,4 +1,5 @@
 import { createCanvas, loadImage } from '@napi-rs/canvas';
+import { cachedLoadImage } from '@/engine/image-cache.js';
 import { writeFileSync, unlinkSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -98,7 +99,7 @@ export async function initialize(ctx: EndpointCtx) {
     const c = canvas.getContext('2d');
 
     // ── Layer 1: base background ──────────────────────────────────────────
-    const bg1 = await loadImage(
+    const bg1 = await cachedLoadImage(
       'https://raw.githubusercontent.com/Zaxerion/databased/refs/heads/main/asset/11.jpg'
     );
     c.drawImage(bg1, 0, 0, 600, 337);
@@ -115,7 +116,7 @@ export async function initialize(ctx: EndpointCtx) {
     c.restore();
 
     // ── Layer 2: foreground PNG overlay (bonk action) ─────────────────────
-    const bg2 = await loadImage(
+    const bg2 = await cachedLoadImage(
       'https://raw.githubusercontent.com/Zaxerion/databased/refs/heads/main/asset/22.png'
     );
     c.drawImage(bg2, 0, 0, 600, 337);

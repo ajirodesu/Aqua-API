@@ -2,6 +2,10 @@
 // any other module (including env.config.ts) reads it.
 import './load-env.js';
 
+// Configures keep-alive agents + timeouts for all outbound axios calls
+// (side-effect import — must happen before any endpoint module runs).
+import './http.js';
+
 import { Elysia } from 'elysia';
 import { node } from '@elysiajs/node';
 import { promises as fsPromises, statSync } from 'node:fs';
@@ -10,6 +14,7 @@ import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { networkInterfaces } from 'node:os';
 import { brotliCompressSync, gzipSync } from 'node:zlib';
+import { createHash } from 'node:crypto';
 import chalk from 'chalk';
 
 import { logger } from './logger.js';
@@ -199,6 +204,143 @@ logger.ready(`Loaded ${totalEndpoints} endpoints`);
 
 await loadNotifications();
 
+// ---- Response caching (in-memory LRU + ETag/304 revalidation) ----
+//
+// GET responses that opt in via `cache-control: public` (canvas images,
+// static meta JSON) are cached in memory. Repeated identical requests are
+// served straight from the cache and, when the client sends If-None-Match,
+// answered with a 304 — no handler runs, no PNG is re-encoded, and the
+// round-trip stays well under a millisecond.
+const JSON_CONTENT_TYPE = 'application/json; charset=utf-8';
+
+function etagFor(data: Uint8Array): string {
+  return '"' + createHash('sha1').update(data).digest('hex').slice(0, 16) + '"';
+}
+
+interface CachedResponseEntry {
+  body: Uint8Array;
+  headers: Record<string, string>;
+  etag: string;
+  expiresAt: number;
+}
+
+const responseCache = new Map<string, CachedResponseEntry>();
+const RESPONSE_CACHE_MAX = 128;
+const RESPONSE_CACHE_MAX_BYTES = 64 * 1024 * 1024;
+let responseCacheBytes = 0;
+
+function responseCacheKey(req: Request): string {
+  const url = new URL(req.url);
+  return `${req.method} ${url.pathname}${url.search}`;
+}
+
+function storeResponseCache(key: string, entry: CachedResponseEntry): void {
+  const prev = responseCache.get(key);
+  if (prev) responseCacheBytes -= prev.body.byteLength;
+
+  responseCache.set(key, entry);
+  responseCacheBytes += entry.body.byteLength;
+
+  while (
+    responseCache.size > RESPONSE_CACHE_MAX ||
+    responseCacheBytes > RESPONSE_CACHE_MAX_BYTES
+  ) {
+    const oldest = responseCache.keys().next().value;
+    if (oldest === undefined) break;
+    const evicted = responseCache.get(oldest)!;
+    responseCacheBytes -= evicted.body.byteLength;
+    responseCache.delete(oldest);
+  }
+}
+
+function invalidateResponseCachePath(pathname: string): void {
+  for (const key of responseCache.keys()) {
+    if (key.includes(` ${pathname}`) && (key === `GET ${pathname}` || key.includes(` ${pathname}?`))) {
+      const evicted = responseCache.get(key);
+      if (evicted) responseCacheBytes -= evicted.body.byteLength;
+      responseCache.delete(key);
+    }
+  }
+}
+
+/**
+ * Wraps a GET handler with ETag/304 + LRU response caching. Non-GET
+ * requests and responses without `cache-control: public` pass through
+ * untouched. Cache validity is bounded by the response's `max-age` (capped
+ * at 5 minutes) so changing upstream content can never be served stale for
+ * long.
+ */
+function cacheGet(handler: (ctx: EndpointCtx) => unknown | Promise<unknown>) {
+  return async (ctx: EndpointCtx): Promise<unknown> => {
+    const { request } = ctx;
+    if (request.method !== 'GET') return handler(ctx);
+
+    const key = responseCacheKey(request);
+    const cached = responseCache.get(key);
+
+    if (cached) {
+      if (cached.expiresAt <= Date.now()) {
+        responseCache.delete(key);
+      } else {
+        const inm = request.headers.get('if-none-match');
+        if (inm && (inm === '*' || inm.includes(cached.etag))) {
+          return new Response(null, {
+            status: 304,
+            headers: { etag: cached.etag, 'cache-control': cached.headers['cache-control'] ?? 'public' },
+          });
+        }
+        return new Response(cached.body, { status: 200, headers: cached.headers });
+      }
+    }
+
+    const result = await handler(ctx);
+    const res = result instanceof Response ? result : null;
+
+    if (res) {
+      const cc = res.headers.get('cache-control') ?? '';
+      if (cc.includes('public') && !cc.includes('no-store') && res.status === 200) {
+        const body = new Uint8Array(await res.clone().arrayBuffer());
+        const etag = res.headers.get('etag') ?? etagFor(body);
+        const maxAge = Number(/max-age=(\d+)/.exec(cc)?.[1] ?? 60);
+        storeResponseCache(key, {
+          body,
+          headers: { ...Object.fromEntries(res.headers.entries()), etag },
+          etag,
+          expiresAt: Date.now() + Math.min(maxAge, 300) * 1000,
+        });
+
+        // Ensure the first response also advertises the ETag so clients can
+        // revalidate (and get a 304) on the next request.
+        if (!res.headers.get('etag')) {
+          return new Response(body, { status: 200, headers: { ...Object.fromEntries(res.headers.entries()), etag } });
+        }
+      }
+    }
+
+    return result;
+  };
+}
+
+/** Pre-built JSON Response for a core meta route (serialized once, ETagged). */
+function metaResponse(data: unknown): Response {
+  const body = Buffer.from(JSON.stringify(data));
+  const etag = etagFor(body);
+  return new Response(body, {
+    headers: { 'content-type': JSON_CONTENT_TYPE, 'cache-control': 'public, max-age=60', etag },
+  });
+}
+
+let endpointsMeta = metaResponse({ status: true, count: totalEndpoints, endpoints: allEndpoints });
+let configMeta = metaResponse({ status: true, ...config, notification: notificationsCache });
+let notifMeta = metaResponse({ notifications: notificationsCache });
+
+function rebuildMetaCache(): void {
+  configMeta = metaResponse({ status: true, ...config, notification: notificationsCache });
+  notifMeta = metaResponse({ notifications: notificationsCache });
+  invalidateResponseCachePath('/api/config');
+  invalidateResponseCachePath('/api/notifications');
+}
+
 function isKnownApiPath(reqPath: string): boolean {
   return (
     reqPath.startsWith('/api/') ||
@@ -257,8 +399,62 @@ const STATIC_CACHE = (ext: string): string =>
       : 'public, max-age=86400'
     : 'no-cache';
 
-/** Serves a file from the web dist directory, with SPA fallback. Returns null when nothing matches. */
-async function serveStatic(urlPath: string): Promise<Response | null> {
+/** Serves a file from the web dist directory, with SPA fallback and ETag/304. Returns null when nothing matches. */
+interface StaticFileEntry {
+  data: Uint8Array;
+  etag: string;
+  contentType: string;
+  mtimeMs: number;
+  size: number;
+}
+
+const staticCache = new Map<string, StaticFileEntry>();
+const STATIC_CACHE_MAX_BYTES = 64 * 1024 * 1024;
+let staticCacheBytes = 0;
+
+/** Reads (and caches) a file from disk, invalidating when mtime/size changes. */
+async function getStaticFile(filePath: string): Promise<StaticFileEntry | null> {
+  let stat;
+  try {
+    stat = statSync(filePath);
+    if (!stat.isFile()) return null;
+  } catch {
+    return null;
+  }
+
+  const cached = staticCache.get(filePath);
+  if (cached && cached.mtimeMs === stat.mtimeMs && cached.size === stat.size) {
+    return cached;
+  }
+
+  try {
+    const data = new Uint8Array(await fsPromises.readFile(filePath));
+    const entry: StaticFileEntry = {
+      data,
+      etag: etagFor(data),
+      contentType: MIME_TYPES[path.extname(filePath).toLowerCase()] ?? 'application/octet-stream',
+      mtimeMs: stat.mtimeMs,
+      size: stat.size,
+    };
+
+    const prev = staticCache.get(filePath);
+    if (prev) staticCacheBytes -= prev.data.byteLength;
+    staticCache.set(filePath, entry);
+    staticCacheBytes += data.byteLength;
+
+    while (staticCacheBytes > STATIC_CACHE_MAX_BYTES && staticCache.size > 0) {
+      const oldest = staticCache.keys().next().value!;
+      staticCacheBytes -= staticCache.get(oldest)!.data.byteLength;
+      staticCache.delete(oldest);
+    }
+
+    return entry;
+  } catch {
+    return null;
+  }
+}
+
+async function serveStatic(urlPath: string, request: Request): Promise<Response | null> {
   if (!frontendBuilt) {
     return new Response(MISSING_BUILD_HTML, { status: 503, headers: { 'content-type': 'text/html' } });
   }
@@ -270,34 +466,36 @@ async function serveStatic(urlPath: string): Promise<Response | null> {
   }
 
   let filePath = resolved;
-  let data: Buffer | null = null;
   try {
-    const stat = statSync(filePath);
-    if (stat.isDirectory()) {
+    if (statSync(filePath).isDirectory()) {
       filePath = path.join(filePath, 'index.html');
     }
-    data = await fsPromises.readFile(filePath);
   } catch {
-    data = null;
+    // Falls through to the SPA fallback below.
   }
 
-  // If we couldn't read the resolved file path directly, try the SPA fallback.
-  if (data === null) {
+  let entry = await getStaticFile(filePath);
+
+  // SPA fallback — unmatched client-side routes render the app shell.
+  if (!entry) {
     const indexPath = path.join(WEB_DIST_DIR, 'index.html');
     if (existsFile(indexPath)) {
-      data = await fsPromises.readFile(indexPath);
-      return new Response(new Uint8Array(data), {
-        status: 200,
-        headers: { 'content-type': MIME_TYPES['.html'], 'cache-control': STATIC_CACHE('.html') },
-      });
+      entry = await getStaticFile(indexPath);
     }
-    return null;
   }
 
-  const ext = path.extname(filePath).toLowerCase();
-  const contentType = MIME_TYPES[ext] ?? 'application/octet-stream';
-  return new Response(new Uint8Array(data), {
-    headers: { 'content-type': contentType, 'cache-control': STATIC_CACHE(ext) },
+  if (!entry) return null;
+
+  const inm = request.headers.get('if-none-match');
+  if (inm && (inm === '*' || inm.includes(entry.etag))) {
+    return new Response(null, {
+      status: 304,
+      headers: { etag: entry.etag, 'cache-control': STATIC_CACHE(path.extname(filePath)), 'vary': 'Accept-Encoding' },
+    });
+  }
+
+  return new Response(entry.data, {
+    headers: { 'content-type': entry.contentType, 'cache-control': STATIC_CACHE(path.extname(filePath)), 'etag': entry.etag },
   });
 }
 
@@ -348,19 +546,11 @@ const app = new Elysia({ adapter: node() })
   .decorate('config', config)
   .decorate('logger', logger);
 
-// ---- Core meta endpoints ----
+// ---- Core meta endpoints (pre-built JSON + ETag/304 via cacheGet) ----
 app
-  .get('/api/endpoints', () => ({
-    status: true,
-    count: totalEndpoints,
-    endpoints: allEndpoints,
-  }))
-  .get('/api/config', () => ({
-    status: true,
-    ...config,
-    notification: notificationsCache,
-  }))
-  .get('/api/notifications', () => ({ notifications: notificationsCache }))
+  .get('/api/endpoints', cacheGet(() => endpointsMeta))
+  .get('/api/config', cacheGet(() => configMeta))
+  .get('/api/notifications', cacheGet(() => notifMeta))
   .post('/api/notification', async (ctx) => {
     const apiKey = env.API_KEY || config.key;
     const body = (typeof ctx.body === 'object' && ctx.body !== null ? ctx.body : {}) as Record<string, any>;
@@ -374,6 +564,7 @@ app
     if (clear) {
       notificationsCache = [];
       await saveNotifications();
+      rebuildMetaCache();
       return { success: true, cleared: true };
     }
 
@@ -390,6 +581,7 @@ app
 
     notificationsCache.push(newNotif);
     await saveNotifications();
+    rebuildMetaCache();
 
     return { success: true };
   });
@@ -397,7 +589,7 @@ app
 // ---- Dynamically mount each endpoint module onto Elysia ----
 for (const def of resolvedRoutes) {
   const method = def.method.toUpperCase() as 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
-  app.route(method, def.route, (ctx) => def.module.initialize(ctx as EndpointCtx));
+  app.route(method, def.route, cacheGet((ctx) => def.module.initialize(ctx as EndpointCtx)));
 }
 
 // ---- Static assets + SPA fallback (registered last so real routes win) ----
@@ -408,7 +600,7 @@ app.get('*', async ({ request }) => {
     return new Response(JSON.stringify({ status: false, error: 'Not found' }), { status: 404, headers: { 'content-type': 'application/json' } });
   }
 
-  const staticFile = await serveStatic(url.pathname);
+  const staticFile = await serveStatic(url.pathname, request);
   if (staticFile) return compressResponse(staticFile, request);
 
   if (wantsHtml(request)) {
