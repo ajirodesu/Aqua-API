@@ -18,10 +18,6 @@ export function EndpointPage() {
   const [running, setRunning] = useState(false);
   const [result, setResult] = useState<ExecuteResult | null>(null);
   const [urlCopied, setUrlCopied] = useState(false);
-  // Signature (method + params) captured at the moment a request was last
-  // sent. Used purely to drive the button label: "Send request again" once
-  // it matches the current form state, reverting to "Send request" the
-  // instant anything changes — including a fresh file/media upload.
   const [lastSentSignature, setLastSentSignature] = useState<string | null>(null);
 
   useEffect(() => {
@@ -42,21 +38,19 @@ export function EndpointPage() {
 
   if (!endpoint) {
     return (
-      <div className="animate-fade-up py-16 text-center">
-        <p className="text-lg font-semibold text-slate-200">Endpoint not found</p>
-        <p className="mt-1 text-sm text-slate-500">It may have been renamed or removed.</p>
-        <Link to="/docs" className="btn-primary mt-6 inline-flex">
-          Back to overview
-        </Link>
+      <div className="flex min-h-[60vh] animate-fade-in-up flex-col items-center justify-center gap-2 rounded-card border border-hairline bg-surface-container px-6 py-16 text-center">
+        <div className="mx-auto max-w-sm">
+          <p className="text-lg font-semibold text-on-surface">Endpoint not found</p>
+          <p className="mt-1 text-sm text-on-surface-variant">It may have been renamed or removed.</p>
+          <Link to="/docs" className="btn-primary mt-6 inline-flex h-11 rounded-lg">
+            Back to overview
+          </Link>
+        </div>
       </div>
     );
   }
 
   const allParams = endpoint.params ?? [];
-  // A param with `dependsOn` only appears once the param it depends on
-  // currently holds one of the listed values — e.g. `url`/`password` only
-  // show up once `option=add` is selected. Re-evaluated on every render so
-  // the form stays dynamic as the user changes other fields.
   const params = allParams.filter((p) => {
     if (!p.dependsOn) return true;
     const current = values[p.dependsOn.param] ?? '';
@@ -64,9 +58,6 @@ export function EndpointPage() {
     return allowed.includes(current);
   });
   const missingRequired = params.some((p) => p.required && !values[p.name]);
-  // True only while the form is exactly as it was for the last request —
-  // any edit (text, select, or a new upload) changes `values` and this
-  // immediately goes false again.
   const visibleValuesForSignature = Object.fromEntries(params.map((p) => [p.name, values[p.name] ?? '']));
   const alreadySent =
     lastSentSignature !== null && lastSentSignature === JSON.stringify({ method, values: visibleValuesForSignature });
@@ -99,47 +90,47 @@ export function EndpointPage() {
   }
 
   return (
-    <div className="animate-fade-up space-y-6 pb-16">
+    <div className="flex animate-fade-in-up flex-col gap-6 pb-16">
       <Link
         to="/docs"
-        className="inline-flex items-center gap-1 text-[13px] font-medium text-slate-500 transition-colors hover:text-slate-200"
+        className="inline-flex items-center gap-1 text-[13px] font-medium text-on-surface-variant transition-colors hover:text-on-surface"
       >
         <ChevronLeft className="h-3.5 w-3.5" />
         Back to Dashboard
       </Link>
 
-      <div>
-        <div className="mb-2 flex items-center gap-2">
+      <div className="flex flex-col gap-1.5">
+        <div className="flex items-center gap-2">
           <MethodBadge method={method} size="md" />
-          <span className="text-[12px] font-medium capitalize text-slate-500">{endpoint.category}</span>
+          <span className="text-xs font-medium capitalize text-on-surface-variant">{endpoint.category}</span>
         </div>
-        <h1 className="font-display text-2xl font-extrabold capitalize tracking-tight text-white sm:text-3xl">
+        <h1 className="text-[22px] font-bold capitalize tracking-tight text-on-surface sm:text-2xl">
           {endpoint.name}
         </h1>
-        <p className="mt-1.5 max-w-2xl text-[14.5px] text-slate-400">{endpoint.desc}</p>
+        <p className="max-w-2xl text-[13px] leading-normal text-on-surface-variant">{endpoint.desc}</p>
       </div>
 
-      <div className="card flex items-center gap-2 p-3">
-        <code className="flex-1 overflow-x-auto whitespace-nowrap font-mono text-[12.5px] text-slate-300">
+      <div className="flex items-center gap-2 rounded-xl border border-hairline bg-surface-container-low p-3">
+        <code className="flex-1 overflow-x-auto whitespace-nowrap border-0 bg-transparent p-0 font-mono text-[12.5px] text-on-surface">
           {publicUrl}
         </code>
-        <button type="button" onClick={copyUrl} className="btn-secondary shrink-0 !px-3 !py-1.5 text-[12px]">
+        <button type="button" onClick={copyUrl} className="btn-secondary h-9 shrink-0 rounded-lg !px-3 !py-1.5 text-xs">
           <Copy className="h-3.5 w-3.5" />
           {urlCopied ? 'Copied' : 'Copy'}
         </button>
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] xl:gap-8">
-        <div className="card p-5 xl:p-6">
+        <div className="rounded-xl border border-hairline bg-surface-container-low p-4 md:p-6">
           {endpoint.methods.length > 1 && (
-            <div className="mb-4 inline-flex rounded-full bg-white/5 p-0.5 text-[13px] font-semibold">
+            <div className="mb-4 inline-flex gap-1 rounded-input border border-hairline bg-surface-container-low p-1 text-[13px] font-semibold">
               {endpoint.methods.map((m) => (
                 <button
                   key={m}
                   type="button"
                   onClick={() => setMethod(m)}
-                  className={`rounded-full px-3.5 py-1.5 transition-colors duration-200 ${
-                    method === m ? 'bg-surface-card text-white shadow-ios-sm' : 'text-slate-400'
+                  className={`rounded-[calc(var(--radius-input)-0.25rem)] px-3.5 py-2 transition-colors duration-fast ${
+                    method === m ? 'bg-surface-container-highest text-on-surface shadow-elevation-1' : 'text-on-surface-variant hover:text-on-surface'
                   }`}
                 >
                   {m}
@@ -149,9 +140,9 @@ export function EndpointPage() {
           )}
 
           {params.length === 0 ? (
-            <p className="py-6 text-center text-sm text-slate-500">
-              This endpoint has no parameters — just run it.
-            </p>
+            <div className="flex flex-col items-center gap-2 rounded-card bg-surface-container px-3 py-12 text-center">
+              <p className="text-sm text-on-surface-variant">This endpoint has no parameters — just run it.</p>
+            </div>
           ) : (
             <div className="space-y-4">
               {params.map((param) => (
@@ -166,9 +157,14 @@ export function EndpointPage() {
             </div>
           )}
 
-          <button type="button" onClick={run} disabled={running || missingRequired} className="btn-primary mt-6 w-full">
+          <button
+            type="button"
+            onClick={run}
+            disabled={running || missingRequired}
+            className="btn-primary mt-6 h-12 w-full rounded-lg text-[14px]"
+          >
             {running ? (
-              <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+              <span className="h-4 w-4 animate-spin rounded-full border-2 border-on-primary/40 border-t-on-primary" />
             ) : (
               <Play className="h-3.5 w-3.5 fill-current" />
             )}
@@ -182,7 +178,10 @@ export function EndpointPage() {
       </div>
 
       <div>
-        <h2 className="mb-3 text-[13px] font-bold uppercase tracking-widest text-slate-500">Code example</h2>
+        <h2 className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-on-surface-variant">
+          Code example
+          <span className="h-px flex-1 bg-hairline" />
+        </h2>
         <CodeExample url={publicUrl} method={method} values={visibleValuesForSignature} />
       </div>
     </div>

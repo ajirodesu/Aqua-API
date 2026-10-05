@@ -13,14 +13,16 @@ import chalk from 'chalk';
 
 import { logger } from './logger.js';
 import { env, validateEnv } from './env.config.js';
+import { requestLogger } from './request-log.js';
+import { adminRouter, setEndpointProvider } from './admin-router.js';
+import { getDb } from '../db/index.js';
+import { adminStore, initAdminStore } from './admin-store.js';
+import { getSiteConfig } from './site-config.js';
 import type {
-  AquaConfig,
   ApiModule,
   EndpointBucket,
   HttpMethod,
-  Notification,
 } from './types.js';
-
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -34,7 +36,6 @@ const WEB_DIST_DIR = path.join(PACKAGES_DIR, 'web', 'dist');
 const APIS_DIR = path.join(SRC_DIR, 'apis');
 const JSON_DIR = path.join(SRC_DIR, 'json');
 const NOTIF_PATH = path.join(JSON_DIR, 'notif.json');
-const CONFIG_PATH = path.join(JSON_DIR, 'config.json');
 
 const app = express();
 const PORT = env.PORT;
@@ -42,43 +43,37 @@ const isProduction = env.isProduction;
 
 validateEnv();
 
-const config: AquaConfig = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'));
+const config = getSiteConfig();
 
 declare module 'express-serve-static-core' {
   interface Request {
     startTime?: number;
-  }
-}
-
-let notificationsCache: Notification[] = [];
-
-async function loadNotifications(): Promise<void> {
-  try {
-    const raw = await fsPromises.readFile(NOTIF_PATH, 'utf8');
-    const parsed = JSON.parse(raw);
-    notificationsCache = Array.isArray(parsed) ? parsed : [];
-  } catch (err) {
-    const error = err as NodeJS.ErrnoException;
-    if (error?.code !== 'ENOENT') {
-      logger.warn(`Failed to load notifications: ${error.message}`);
-    }
-    notificationsCache = [];
-  }
-}
-
-async function saveNotifications(): Promise<void> {
-  try {
-    await fsPromises.mkdir(JSON_DIR, { recursive: true });
-    await fsPromises.writeFile(NOTIF_PATH, JSON.stringify(notificationsCache, null, 2), 'utf8');
-  } catch (err) {
-    logger.error(`Failed to save notifications: ${(err as Error).message}`);
+    /** Set by the dynamic endpoint wrapper — marks real endpoint usage. */
+    isEndpoint?: boolean;
   }
 }
 
 logger.info('Starting server initialization...');
 
+// Database first: Neon when NEON_DATABASE_URL/DATABASE_URL is set,
+// otherwise the instant fake (memory + local JSON file, zero setup).
+const db = await getDb();
+logger.ready(`Database ready (adapter: ${db.kind})`);
+await initAdminStore();
+
 app.set('trust proxy', true);
 app.set('json spaces', isProduction ? 0 : 2);
+
+// CORS: Vite dev frontend (http://localhost:5173) calls the API at its
+// absolute origin (http://localhost:3000) directly — see web/src/lib/api.ts.
+// Without these headers the browser blocks /api/* + dynamic endpoint calls.
+app.use((req, res, next) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  if (req.method === 'OPTIONS') return res.sendStatus(204);
+  next();
+});
 
 app.use(
   compression({
@@ -91,6 +86,8 @@ app.use((req, _res, next) => {
   req.startTime = Date.now();
   next();
 });
+
+app.use(requestLogger);
 
 app.use((req, res, next) => {
   const originalJson = res.json.bind(res);
@@ -116,6 +113,24 @@ app.use((req, res, next) => {
 
 app.use(express.json({ limit: '15mb' }));
 app.use(express.urlencoded({ extended: false, limit: '15mb' }));
+
+app.get('/api/health', (_req, res) => {
+  res.json({ status: true, health: 'ok', uptime: Math.floor(process.uptime()) });
+});
+
+// Admin dashboard API. Mounted after the body parsers (admin login reads
+// JSON bodies) but before the maintenance guard below, so the dashboard
+// stays reachable while the public API is paused.
+app.use('/api/admin', adminRouter);
+
+// Maintenance mode: pause the public API (REST + dynamic endpoints) while
+// leaving the admin dashboard, health probe, and frontend untouched.
+app.use((req, res, next) => {
+  if (!adminStore.state.maintenance) return next();
+  if (req.path.startsWith('/api/admin') || req.path === '/api/health') return next();
+  if (req.method === 'GET' && !isKnownApiPath(req.path)) return next();
+  res.status(503).json({ error: 'Service temporarily unavailable (maintenance mode)' });
+});
 
 if (!fs.existsSync(path.join(WEB_DIST_DIR, 'index.html'))) {
   logger.warn(`Frontend build not found at ${WEB_DIST_DIR} — run "npm run build" from the repo root.`);
@@ -206,6 +221,11 @@ async function loadEndpointsFromDirectory(
           route,
           async (req, res, next) => {
             try {
+              if (adminStore.isEndpointDisabled(route)) {
+                res.status(404).json({ error: 'Endpoint disabled' });
+                return;
+              }
+              req.isEndpoint = true;
               await handler({ req, res, app, config, meta, logger });
             } catch (err) {
               next(err);
@@ -244,25 +264,34 @@ logger.info('Loading API endpoints...');
 const allEndpoints = await loadEndpointsFromDirectory(APIS_DIR);
 const totalEndpoints = allEndpoints.reduce((total, cat) => total + cat.items.length, 0);
 logger.ready(`Loaded ${totalEndpoints} endpoints`);
+setEndpointProvider(() => allEndpoints);
 
 app.get('/api/endpoints', (_req, res) => {
+  // Disabled endpoints are invisible here (and 404 on direct access) —
+  // only the admin Endpoints page lists the full catalog with flags.
+  const visible = allEndpoints
+    .map((bucket) => ({
+      ...bucket,
+      items: bucket.items.filter((i) => !adminStore.isEndpointDisabled(i.path.split('?')[0])),
+    }))
+    .filter((bucket) => bucket.items.length > 0);
   res.json({
     status: true,
-    count: totalEndpoints,
-    endpoints: allEndpoints,
+    count: visible.reduce((total, cat) => total + cat.items.length, 0),
+    endpoints: visible,
   });
 });
 
-app.get('/api/config', (_req, res) => {
+app.get('/api/config', async (_req, res) => {
   res.json({
     status: true,
     ...config,
-    notification: notificationsCache,
+    notification: await db.listNotifications(),
   });
 });
 
-app.get('/api/notifications', (_req, res) => {
-  res.json({ notifications: notificationsCache });
+app.get('/api/notifications', async (_req, res) => {
+  res.json({ notifications: await db.listNotifications() });
 });
 
 app.post('/api/notification', async (req, res) => {
@@ -275,8 +304,7 @@ app.post('/api/notification', async (req, res) => {
   const { message, clear, firstName } = req.body ?? {};
 
   if (clear) {
-    notificationsCache = [];
-    await saveNotifications();
+    await db.clearNotifications();
     return res.json({ success: true, cleared: true });
   }
 
@@ -284,22 +312,28 @@ app.post('/api/notification', async (req, res) => {
     return res.status(400).json({ error: 'Missing message' });
   }
 
-  const newNotif: Notification = {
-    id: Date.now(),
+  const now = Date.now();
+  const notification = {
+    id: now,
     title: `From Developer ${firstName || ''}`.trim(),
     message: String(message).trim(),
-    createdAt: Date.now(),
+    createdAt: now,
   };
+  await db.addNotification(notification);
 
-  notificationsCache.push(newNotif);
-  await saveNotifications();
-
-  res.json({ success: true });
+  res.status(201).json({ success: true, notification });
 });
 
-/** True when the request is a browser/WebView navigation expecting an HTML page. */
+/** True when the request is a browser/WebView navigation expecting an HTML page.
+ *  Programmatic callers (fetch/XHR with a wildcard Accept header) always get
+ *  JSON — only an explicit text/html preference ahead of any JSON yields HTML. */
 function wantsHtml(req: express.Request): boolean {
-  return req.method === 'GET' && req.accepts(['html', 'json']) === 'html';
+  if (req.method !== 'GET') return false;
+  const accept = String(req.headers.accept ?? '');
+  const htmlIdx = accept.indexOf('text/html');
+  if (htmlIdx === -1) return false;
+  const jsonIdx = accept.indexOf('application/json');
+  return jsonIdx === -1 || htmlIdx < jsonIdx;
 }
 
 function isKnownApiPath(reqPath: string): boolean {
@@ -369,8 +403,6 @@ app.use((err: Error, req: express.Request, res: express.Response, _next: express
 
   res.status(500).json({ status: false, error: 'Internal server error' });
 });
-
-await loadNotifications();
 
 app.listen(PORT, () => {
   logger.ready('Server started successfully');

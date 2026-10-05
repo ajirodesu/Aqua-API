@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { randomBytes } from 'node:crypto';
 import type { ApiHandler, ApiMeta, EndpointCtx } from '@/engine/types.js';
+import { BROWSER_HEADERS, errorStatus } from '@/engine/image-loader.js';
 import { env } from '@/engine/env.config.js';
 
 type Rgb = [number, number, number];
@@ -369,7 +370,10 @@ async function loadRemoteImage(source: string, prefix: string): Promise<LoadedIm
       ext = mime.split('/')[1]?.replace('jpeg', 'jpg').replace('svg+xml', 'svg') || 'jpg';
       buf = Buffer.from(source.slice(commaIndex + 1), 'base64');
     } else {
-      const res = await fetch(source);
+      const res = await fetch(source, {
+        headers: BROWSER_HEADERS,
+        signal: AbortSignal.timeout(15000),
+      });
       if (!res.ok) return null;
 
       const contentType = res.headers.get('content-type') ?? 'image/jpeg';
@@ -1173,6 +1177,6 @@ export async function initialize({ req, res }: EndpointCtx) {
     const bufferArr = await canvas.encode('png');
     res.type('image/png').send(Buffer.from(bufferArr));
   } catch (error) {
-    return res.status(500).json({ error: (error as Error).message || 'Internal server error' });
+    return res.status(errorStatus(error)).json({ error: (error as Error).message || 'Internal server error' });
   }
 };

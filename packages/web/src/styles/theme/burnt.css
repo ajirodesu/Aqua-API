@@ -1,0 +1,267 @@
+/* ============================================================
+   "BURNT" THEME — the warm counterpart to Aqua and Indigo
+   (formerly labeled "Summer"). This is the dark-mode theme of
+   the Claude.ai interface itself: warm near-black charcoal
+   surfaces, cream text, and the signature terracotta-orange
+   accent, with a soft sage green and warm tan rounding out the
+   supporting palette. `color-scheme: dark` is set below and
+   every surface step stays in the warm-charcoal register — there
+   is no light variant of this theme by design.
+
+   Palette strategy:
+   • Surfaces: warm charcoal (not cold navy-black or pure gray) —
+     the same warm-neutral register Claude.ai itself uses
+   • Primary: Claude's signature terracotta/orange accent
+   • Secondary: warm tan/kraft neutral for supporting actions
+   • Tertiary: soft sage green for code/data accents, kept crisp
+     against the warm neutrals for contrast
+   • Elevation via surface container steps, each a shade lighter
+     in the warm-charcoal register
+   • Same shape/glass/glow/motion vocabulary as Aqua and Indigo —
+     pill buttons, frosted glass, soft layered shadows, springy
+     easing — so every theme reads as one unified premium system,
+     distinguished only by hue and warmth, never by finish quality.
+
+   Shape tokens (--radius-card, --radius-button, etc.) live once
+   in tokens.css, not here — so sizing never drifts between themes.
+   ============================================================ */
+
+html[data-theme='burnt'] {
+  /* ==================== PRIMARY (Claude terracotta/orange) ====================
+     Scale reference: light #ffd9c3 → mid #DA7756 → dark #4a281b
+     #DA7756 (218, 119, 86) is Anthropic's official Claude brand
+     terracotta — verified against Claude's published brand color,
+     used verbatim below rather than an approximation. */
+  --burnt-color-primary: 218 119 86;
+  --burnt-color-on-primary: 255 255 255;
+  --burnt-color-primary-container: 74 40 27;
+  --burnt-color-on-primary-container: 255 214 195;
+
+  /* ==================== SECONDARY (warm tan / "kraft" neutral) ==================== */
+  --burnt-color-secondary: 199 178 158;
+  --burnt-color-on-secondary: 46 34 22;
+  --burnt-color-secondary-container: 61 48 36;
+  --burnt-color-on-secondary-container: 232 218 200;
+
+  /* ==================== TERTIARY (soft sage green) ==================== */
+  --burnt-color-tertiary: 156 176 132;
+  --burnt-color-on-tertiary: 20 28 12;
+  --burnt-color-tertiary-container: 40 51 28;
+  --burnt-color-on-tertiary-container: 214 227 197;
+
+  /* ==================== SURFACE SYSTEM (warm charcoal, Claude.ai dark mode) ==================== */
+  /* Base background: deep warm near-black #111110 — a second, deliberate
+     darkening pass on top of the previous #1b1b19 (itself already darker
+     than the original #262624). Still keeps the warm-charcoal hue ratio
+     (R >= G >= B, never a cold gray) and the same *relative* spacing
+     between elevation steps as before, so the card/hover hierarchy reads
+     identically, just lower on the brightness scale. Outline and hairline
+     tokens are bumped up slightly (not scaled down) so hairlines, borders,
+     and dividers stay clearly legible against the deeper background rather
+     than sinking into it — that trade-off is what keeps this "much darker"
+     pass eye-comfortable instead of just crushed and flat. */
+  --burnt-color-surface: 17 17 16;
+  --burnt-color-on-surface: 250 249 245;
+  --burnt-color-surface-variant: 46 44 40;
+  --burnt-color-on-surface-variant: 176 174 167;
+  --burnt-color-surface-container-lowest: 10 10 9;
+  --burnt-color-surface-container-low: 13 13 12;
+  /* Card/surface background */
+  --burnt-color-surface-container: 22 22 20;
+  --burnt-color-surface-container-high: 28 27 25;
+  --burnt-color-surface-container-highest: 35 34 31;
+  --burnt-color-surface-bright: 176 174 167;
+  --burnt-color-surface-dim: 10 10 9;
+
+  /* ==================== INVERSE ==================== */
+  --burnt-color-inverse-surface: 250 249 245;
+  --burnt-color-inverse-on-surface: 27 27 25;
+  --burnt-color-inverse-primary: 74 40 27;
+
+  /* ==================== OUTLINE ==================== */
+  /* Kept brighter than a straight scale-down of the surfaces above so
+     hairlines and dividers stay clearly defined against the deeper
+     background instead of disappearing into it. */
+  --burnt-color-outline: 138 136 130;
+  --burnt-color-outline-variant: 56 54 49;
+
+  /* ==================== SCRIM & SHADOW ==================== */
+  --burnt-color-scrim: 0 0 0;
+  --burnt-color-shadow: 10 8 6;
+
+  /* ==================== ERROR ==================== */
+  --burnt-color-error: 248 96 88;
+  --burnt-color-on-error: 255 255 255;
+  --burnt-color-error-container: 56 16 15;
+  --burnt-color-on-error-container: 255 199 195;
+
+  /* ==================== SUCCESS ==================== */
+  --burnt-color-success: 134 197 116;
+  --burnt-color-on-success: 12 32 8;
+  --burnt-color-success-container: 28 46 18;
+  --burnt-color-on-success-container: 197 232 183;
+
+  /* ==================== WARNING ==================== */
+  --burnt-color-warning: 240 180 60;
+  --burnt-color-on-warning: 40 26 0;
+  --burnt-color-warning-container: 54 38 8;
+  --burnt-color-on-warning-container: 253 224 160;
+
+  /* ==================== INFO (soft sky blue) ==================== */
+  --burnt-color-info: 130 170 220;
+  --burnt-color-on-info: 6 26 51;
+  --burnt-color-info-container: 16 40 71;
+  --burnt-color-on-info-container: 206 226 250;
+
+  /* ==================== GRADIENTS ==================== */
+  --burnt-color-gradient-primary: linear-gradient(135deg, rgb(218 119 86) 0%, rgb(163 82 52) 100%);
+  --burnt-color-gradient-secondary: linear-gradient(135deg, rgb(199 178 158) 0%, rgb(140 118 96) 100%);
+  --burnt-color-gradient-tertiary: linear-gradient(135deg, rgb(156 176 132) 0%, rgb(94 116 70) 100%);
+  --burnt-color-gradient-error: linear-gradient(135deg, rgb(248 96 88) 0%, rgb(120 28 26) 100%);
+  --burnt-color-gradient-success: linear-gradient(135deg, rgb(134 197 116) 0%, rgb(56 96 40) 100%);
+  --burnt-color-gradient-warning: linear-gradient(135deg, rgb(240 180 60) 0%, rgb(150 100 8) 100%);
+  --burnt-color-gradient-info: linear-gradient(135deg, rgb(130 170 220) 0%, rgb(50 90 150) 100%);
+
+  /* ==================== HAIRLINE BORDERS ====================
+     Warm cream at 8% opacity — mirrors Aqua's hairline treatment */
+  --color-hairline-border: rgba(250, 249, 245, 0.1);
+
+  /* ==================== HEADER SEPARATOR ====================
+     The sidebar header's 1px line style — every page header uses
+     this same token so all top bars divide with identical weight */
+  --color-separator: rgba(232, 218, 200, 0.14);
+
+  /* ==================== FROSTED GLASS ==================== */
+  --glass-bg: rgba(32, 32, 30, 0.55);
+  --glass-blur: 20px;
+  --glass-saturate: 160%;
+  --glass-border: rgba(250, 249, 245, 0.1);
+
+  /* ==================== INPUT SURFACES ==================== */
+  --color-input-bg: rgba(32, 32, 30, 0.55);
+  --color-input-border: rgba(250, 249, 245, 0.1);
+
+  /* ==================== SOFT iOS-STYLE SHADOW SCALE ==================== */
+  --shadow-soft-sm:
+    0 1px 2px rgba(10, 8, 6, 0.3),
+    0 2px 8px rgba(10, 8, 6, 0.24);
+  --shadow-soft-md:
+    0 1px 2px rgba(10, 8, 6, 0.32),
+    0 8px 24px rgba(10, 8, 6, 0.36);
+  --shadow-soft-lg:
+    0 2px 4px rgba(10, 8, 6, 0.34),
+    0 16px 40px rgba(10, 8, 6, 0.4),
+    0 32px 64px rgba(10, 8, 6, 0.28);
+
+  --shadow-card-rest: var(--shadow-soft-sm);
+  --shadow-card-hover: var(--shadow-soft-md);
+
+  /* Wide, soft accent glow ring for focused inputs */
+  --shadow-focus-ring: 0 0 0 4px rgba(218, 119, 86, 0.22);
+
+  /* Avatar/portrait glow ring — warm counterpart to Aqua's mint glow */
+  --shadow-avatar-glow:
+    0 0 0 3px rgb(var(--burnt-color-surface) / 1),
+    0 0 0 5px rgba(218, 119, 86, 0.5),
+    0 0 32px rgba(218, 119, 86, 0.3);
+
+  /* ==================== TYPOGRAPHY ====================
+     Inter for body/UI, Fraunces for display/brand — the exact
+     same faces Aqua and Indigo use. Only font-family lives in
+     this block: no font-size, line-height, letter-spacing, or
+     font-weight token is defined anywhere in this theme file.
+     Every one of those lives in tokens.css and is shared,
+     unmodified, across all three themes — Burnt must never fork
+     typography sizing/scaling from its siblings. */
+  --font-family-brand:
+    'Fraunces', ui-serif, Georgia, 'Times New Roman', serif;
+  --font-family-plain:
+    'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --font-family-mono:
+    'JetBrains Mono', ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+
+  /* ==================== AMBIENT BACKGROUND GLOW ==================== */
+  --ambient-glow-opacity: 1;
+  --ambient-glow-primary: rgba(218, 119, 86, 0.16);
+  --ambient-glow-secondary: rgba(156, 176, 132, 0.12);
+
+  /* ==================== SCROLLBAR ====================
+     Invisible at rest, matching Aqua's refined behavior */
+  --scrollbar-idle-opacity: 0;
+
+  /* ==================== SPECULAR HIGHLIGHT ====================
+     Matches Aqua's top-edge glass highlight on raised surfaces */
+  --specular-highlight: linear-gradient(
+    180deg,
+    rgba(250, 249, 245, 0.06) 0%,
+    rgba(250, 249, 245, 0) 14%
+  );
+
+  /* -------- Reference layer -------- */
+  --color-primary: var(--burnt-color-primary);
+  --color-on-primary: var(--burnt-color-on-primary);
+  --color-primary-container: var(--burnt-color-primary-container);
+  --color-on-primary-container: var(--burnt-color-on-primary-container);
+
+  --color-secondary: var(--burnt-color-secondary);
+  --color-on-secondary: var(--burnt-color-on-secondary);
+  --color-secondary-container: var(--burnt-color-secondary-container);
+  --color-on-secondary-container: var(--burnt-color-on-secondary-container);
+
+  --color-tertiary: var(--burnt-color-tertiary);
+  --color-on-tertiary: var(--burnt-color-on-tertiary);
+  --color-tertiary-container: var(--burnt-color-tertiary-container);
+  --color-on-tertiary-container: var(--burnt-color-on-tertiary-container);
+
+  --color-surface: var(--burnt-color-surface);
+  --color-on-surface: var(--burnt-color-on-surface);
+  --color-surface-variant: var(--burnt-color-surface-variant);
+  --color-on-surface-variant: var(--burnt-color-on-surface-variant);
+  --color-surface-container-lowest: var(--burnt-color-surface-container-lowest);
+  --color-surface-container-low: var(--burnt-color-surface-container-low);
+  --color-surface-container: var(--burnt-color-surface-container);
+  --color-surface-container-high: var(--burnt-color-surface-container-high);
+  --color-surface-container-highest: var(--burnt-color-surface-container-highest);
+  --color-surface-bright: var(--burnt-color-surface-bright);
+  --color-surface-dim: var(--burnt-color-surface-dim);
+
+  --color-inverse-surface: var(--burnt-color-inverse-surface);
+  --color-inverse-on-surface: var(--burnt-color-inverse-on-surface);
+  --color-inverse-primary: var(--burnt-color-inverse-primary);
+
+  --color-outline: var(--burnt-color-outline);
+  --color-outline-variant: var(--burnt-color-outline-variant);
+
+  --color-scrim: var(--burnt-color-scrim);
+  --color-shadow: var(--burnt-color-shadow);
+
+  --color-error: var(--burnt-color-error);
+  --color-on-error: var(--burnt-color-on-error);
+  --color-error-container: var(--burnt-color-error-container);
+  --color-on-error-container: var(--burnt-color-on-error-container);
+
+  --color-success: var(--burnt-color-success);
+  --color-on-success: var(--burnt-color-on-success);
+  --color-success-container: var(--burnt-color-success-container);
+  --color-on-success-container: var(--burnt-color-on-success-container);
+
+  --color-warning: var(--burnt-color-warning);
+  --color-on-warning: var(--burnt-color-on-warning);
+  --color-warning-container: var(--burnt-color-warning-container);
+  --color-on-warning-container: var(--burnt-color-on-warning-container);
+
+  --color-info: var(--burnt-color-info);
+  --color-on-info: var(--burnt-color-on-info);
+  --color-info-container: var(--burnt-color-info-container);
+  --color-on-info-container: var(--burnt-color-on-info-container);
+
+  --color-gradient-primary: var(--burnt-color-gradient-primary);
+  --color-gradient-secondary: var(--burnt-color-gradient-secondary);
+  --color-gradient-tertiary: var(--burnt-color-gradient-tertiary);
+  --color-gradient-error: var(--burnt-color-gradient-error);
+  --color-gradient-success: var(--burnt-color-gradient-success);
+  --color-gradient-warning: var(--burnt-color-gradient-warning);
+  --color-gradient-info: var(--burnt-color-gradient-info);
+
+  color-scheme: dark;
+}

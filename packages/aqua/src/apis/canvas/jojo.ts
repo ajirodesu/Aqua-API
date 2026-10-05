@@ -1,4 +1,5 @@
 import { createCanvas, loadImage } from '@napi-rs/canvas';
+import { loadRemoteImage, loadTemplateImage, errorStatus } from '@/engine/image-loader.js';
 import type { ApiHandler, ApiMeta, EndpointCtx } from '@/engine/types.js';
 
 export const meta: ApiMeta = {
@@ -17,24 +18,6 @@ export const meta: ApiMeta = {
   ],
 };
 
-/**
- * `loadImage()` only understands remote URLs, local file paths, or raw
- * bytes — it does not parse `data:` URIs. Uploads from the docs UI arrive
- * as base64 data URIs (via FileReader.readAsDataURL), so those need to be
- * decoded into a Buffer first; plain URLs are passed through untouched.
- */
-function resolveImageSource(image: string): string | Buffer {
-  if (image.startsWith('data:')) {
-    const commaIndex = image.indexOf(',');
-    if (commaIndex === -1) {
-      throw new Error('Malformed data URI for parameter: image');
-    }
-    const base64 = image.slice(commaIndex + 1);
-    return Buffer.from(base64, 'base64');
-  }
-  return image;
-}
-
 export async function initialize({ req, res }: EndpointCtx) {
   const image: string | undefined = req.method === 'POST' ? req.body?.image : (req.query?.image as string);
 
@@ -51,17 +34,17 @@ export async function initialize({ req, res }: EndpointCtx) {
     ctx.save();
     ctx.beginPath();
     ctx.rotate((-8 * Math.PI) / 180);
-    const overlayImage = await loadImage(resolveImageSource(image));
+    const overlayImage = await loadRemoteImage(image, 'image');
     ctx.drawImage(overlayImage, 120, 173, 161, 113);
     ctx.restore();
 
-    const bg = await loadImage(bgUrl);
+    const bg = await loadTemplateImage(bgUrl, 'template');
     ctx.drawImage(bg, 0, 0, 600, 337);
 
     const bufferArr = await canvas.encode('png');
     res.type('image/png').send(Buffer.from(bufferArr));
   } catch (error) {
-    return res.status(500).json({ error: (error as Error).message || 'Internal server error' });
+    return res.status(errorStatus(error)).json({ error: (error as Error).message || 'Internal server error' });
   }
 };
 

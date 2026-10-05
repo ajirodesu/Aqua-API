@@ -1,20 +1,32 @@
 <!doctype html>
-<html lang="en" class="dark">
+<html lang="en" class="dark" data-theme="aqua">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <meta name="theme-color" content="#0ab4e8" />
+    <meta name="theme-color" content="#0A0C0E" />
     <title>Aqua APIs — Simple and easy to use</title>
     <meta name="description" content="Aqua APIs: a fast, friendly REST API playground and documentation." />
     <link rel="icon" type="image/png" href="/icon.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
       rel="stylesheet"
     />
+    <script>
+      try {
+        var t = localStorage.getItem('aqua-ui-theme');
+        if (t === 'aqua' || t === 'burnt' || t === 'indigo') {
+          document.documentElement.setAttribute('data-theme', t);
+        } else {
+          document.documentElement.setAttribute('data-theme', 'aqua');
+        }
+      } catch (e) {
+        document.documentElement.setAttribute('data-theme', 'aqua');
+      }
+    </script>
   </head>
-  <body class="bg-surface text-slate-100 antialiased">
+  <body class="bg-surface text-on-surface antialiased">
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

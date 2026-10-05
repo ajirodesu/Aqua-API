@@ -1,8 +1,5 @@
 import { createCanvas, loadImage } from '@napi-rs/canvas';
-import { writeFileSync, unlinkSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-import { randomBytes } from 'node:crypto';
+import { loadRemoteImage, loadTemplateImage, errorStatus } from '@/engine/image-loader.js';
 import type { ApiHandler, ApiMeta, EndpointCtx } from '@/engine/types.js';
 
 export const meta: ApiMeta = {
@@ -28,53 +25,6 @@ export const meta: ApiMeta = {
   ],
 };
 
-/**
- * Resolves an avatar param (remote URL or an uploaded `data:` URI from the
- * docs UI) down to a temp file and loads it with loadImage(). Writing to
- * disk first avoids the "@napi-rs/canvas" "Invalid SVG image" bug that
- * occurs when passing a raw Buffer directly.
- */
-async function loadAvatarImage(source: string, prefix: string): Promise<ReturnType<typeof loadImage>> {
-  let buf: Buffer;
-  let ext = 'jpg';
-
-  if (source.startsWith('data:')) {
-    const commaIndex = source.indexOf(',');
-    if (commaIndex === -1) {
-      throw new Error(`Malformed data URI for parameter: ${prefix}`);
-    }
-    const mime = source.slice(5, commaIndex).split(';')[0] || 'image/jpeg';
-    ext = mime.split('/')[1]?.replace('jpeg', 'jpg').replace('svg+xml', 'svg') || 'jpg';
-    buf = Buffer.from(source.slice(commaIndex + 1), 'base64');
-  } else {
-    const res = await fetch(source);
-    if (!res.ok) throw new Error(`Failed to fetch image (${res.status}): ${source}`);
-
-    const contentType = res.headers.get('content-type') ?? 'image/jpeg';
-    ext =
-      contentType
-        .split('/')[1]
-        ?.replace('jpeg', 'jpg')
-        ?.replace('svg+xml', 'svg')
-        ?.split(';')[0] || 'jpg';
-
-    buf = Buffer.from(await res.arrayBuffer());
-  }
-
-  const tmp = join(tmpdir(), `${prefix}_${randomBytes(8).toString('hex')}.${ext}`);
-  writeFileSync(tmp, buf);
-
-  try {
-    return await loadImage(tmp);
-  } finally {
-    try {
-      unlinkSync(tmp);
-    } catch {
-      /* ignore cleanup errors */
-    }
-  }
-}
-
 export async function initialize({ req, res }: EndpointCtx) {
   const avatar1: string | undefined =
     req.method === 'POST' ? req.body?.avatar1 : (req.query?.avatar1 as string); // sender — bonker (left)
@@ -93,8 +43,9 @@ export async function initialize({ req, res }: EndpointCtx) {
     const c = canvas.getContext('2d');
 
     // ── Layer 1: base background ──────────────────────────────────────────
-    const bg1 = await loadImage(
-      'https://raw.githubusercontent.com/Zaxerion/databased/refs/heads/main/asset/11.jpg'
+    const bg1 = await loadTemplateImage(
+      'https://raw.githubusercontent.com/Zaxerion/databased/refs/heads/main/asset/11.jpg',
+      'background'
     );
     c.drawImage(bg1, 0, 0, 600, 337);
 
@@ -105,13 +56,14 @@ export async function initialize({ req, res }: EndpointCtx) {
     c.stroke();
     c.closePath();
     c.clip();
-    const imgTarget = await loadAvatarImage(avatar2, 'bonk_target');
+    const imgTarget = await loadRemoteImage(avatar2, 'avatar2');
     c.drawImage(imgTarget, 373, 115, 110, 110);
     c.restore();
 
     // ── Layer 2: foreground PNG overlay (bonk action) ─────────────────────
-    const bg2 = await loadImage(
-      'https://raw.githubusercontent.com/Zaxerion/databased/refs/heads/main/asset/22.png'
+    const bg2 = await loadTemplateImage(
+      'https://raw.githubusercontent.com/Zaxerion/databased/refs/heads/main/asset/22.png',
+      'foreground'
     );
     c.drawImage(bg2, 0, 0, 600, 337);
 
@@ -122,13 +74,13 @@ export async function initialize({ req, res }: EndpointCtx) {
     c.stroke();
     c.closePath();
     c.clip();
-    const imgSender = await loadAvatarImage(avatar1, 'bonk_sender');
+    const imgSender = await loadRemoteImage(avatar1, 'avatar1');
     c.drawImage(imgSender, 57, 56, 96, 96);
     c.restore();
 
     const bufferArr = await canvas.encode('png');
     res.type('image/png').send(Buffer.from(bufferArr));
   } catch (error) {
-    return res.status(500).json({ error: (error as Error).message || 'Internal server error' });
+    return res.status(errorStatus(error)).json({ error: (error as Error).message || 'Internal server error' });
   }
 };

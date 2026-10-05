@@ -1,0 +1,25 @@
+/* Bot Manager — shared shape & type source of truth (Persian-Bot principles).
+   Imported LAST so it wins over theme files.
+   Colors/surfaces/glows owned by per-theme files; this file only unifies
+   what must never change between themes:
+   - Font families (Inter UI, JetBrains Mono data)
+   - Restrained shape scale (8 / 10 / 16 / 20 radii) */
+
+:root,
+html[data-theme='aqua'],
+html[data-theme='burnt'],
+html[data-theme='indigo'] {
+  --font-family-brand: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-family-plain: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-family-mono: 'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace;
+  color-scheme: dark;
+}
+
+:root {
+  --radius-card: 1rem;
+  --radius-card-lg: 1.25rem;
+  --radius-button: 0.625rem;
+  --radius-input: 0.625rem;
+  --radius-badge: 0.5rem;
+  --radius-compact: 0.5rem;
+}

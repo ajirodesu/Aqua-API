@@ -3,17 +3,19 @@ import { Compass } from 'lucide-react';
 
 export function NotFound() {
   return (
-    <div className="flex min-h-[100dvh] flex-col items-center justify-center gap-4 bg-surface px-6 text-center">
-      <span className="grid h-14 w-14 place-items-center rounded-full bg-aqua-500/10 text-aqua-400">
-        <Compass className="h-7 w-7" strokeWidth={1.8} />
-      </span>
-      <h1 className="font-display text-2xl font-extrabold text-white">Page not found</h1>
-      <p className="max-w-sm text-sm text-slate-400">
-        The page you're looking for doesn't exist or may have moved.
-      </p>
-      <Link to="/" className="btn-primary mt-2">
-        Back home
-      </Link>
+    <div className="flex min-h-[100dvh] flex-col items-center justify-center bg-surface px-6 py-12 text-center">
+      <div className="mx-auto flex w-full max-w-sm flex-col items-center gap-2 rounded-card bg-surface-container px-6 py-12">
+        <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-on-surface/10">
+          <Compass className="h-8 w-8 text-primary" strokeWidth={1.8} />
+        </span>
+        <h1 className="mt-2 text-xl font-bold tracking-tight text-on-surface">Page not found</h1>
+        <p className="text-[13px] leading-relaxed text-on-surface-variant">
+          The page you&apos;re looking for doesn&apos;t exist or may have moved.
+        </p>
+        <Link to="/" className="btn-primary mt-4 h-12 w-full rounded-lg text-[14px]">
+          Back home
+        </Link>
+      </div>
     </div>
   );
 }

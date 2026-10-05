@@ -29,6 +29,11 @@ export interface EnvConfig {
   /** Shared secret required on `POST /api/notification`. Falls back to config.json's `key` field if unset. */
   API_KEY: string | undefined;
 
+  /** Neon Postgres connection string. When set, the database layer uses
+   * Neon (`pg` Pool, Persian-Bot neondb logic); otherwise the instant fake
+   * database (memory + local JSON file) is used. Falls back to DATABASE_URL. */
+  NEON_DATABASE_URL: string | undefined;
+
   /** Bearer token for the Lumenfall image-generation API (`/ai/lumenfall`). */
   LUMENFALL_API: string | undefined;
   /** API key for the `shoti` client (`/random/shoti`). Falls back to config.json's `shotikey` field if unset. */
@@ -115,6 +120,8 @@ export const env: EnvConfig = {
   PORT: readNumber('PORT', 3000),
 
   API_KEY: readString('API_KEY'),
+
+  NEON_DATABASE_URL: readString('NEON_DATABASE_URL') ?? readString('DATABASE_URL'),
 
   LUMENFALL_API: readString('LUMENFALL_API'),
   SHOTI_APIKEY: readString('SHOTI_APIKEY'),

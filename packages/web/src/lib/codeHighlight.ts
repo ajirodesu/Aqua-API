@@ -80,7 +80,7 @@ export function withLineNumbers(highlightedHtml: string): string {
   return lines
     .map(
       (line, i) =>
-        `<span class="grid grid-cols-[2.25rem_1fr]"><span class="select-none pr-3 text-right text-slate-600">${
+        `<span class="grid grid-cols-[2.25rem_1fr]"><span class="select-none pr-3 text-right text-surface-variant">${
           i + 1
         }</span><span class="whitespace-pre">${line || ' '}</span></span>`
     )

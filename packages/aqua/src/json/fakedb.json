@@ -1,0 +1,21 @@
+{
+  "settings": {
+    "maintenance": "false",
+    "disabled_endpoints": "[\"/canvas/affect\",\"/ai/lumenfall\"]"
+  },
+  "notifications": [],
+  "admins": [
+    {
+      "id": "muv9yabys61bq4u6",
+      "username": "owner",
+      "passwordHash": "scrypt$d85af0baf98f650f6ba133d2ba00aa9d$7b224e223a31363338342c2252223a382c2250223a312c226d61786d656d223a36373130383836347d$bb50817c9e570fe5216d69689b50ee78da98edb984004a683f5d7e20d4d0e9f6",
+      "createdAt": 1791206247886
+    },
+    {
+      "id": "muva31o4vbq3l4cf",
+      "username": "ajirodesu",
+      "passwordHash": "scrypt$892fd838a195c5b38d0a23569099afca$7b224e223a31363338342c2252223a382c2250223a312c226d61786d656d223a36373130383836347d$3bf6919a0d10ef8b0d5371d72ffd5b510d167d6938df6793985678df9f7edd50",
+      "createdAt": 1791206469940
+    }
+  ]
+}

@@ -20,6 +20,7 @@
     "compression": "^1.8.1",
     "express": "^5.2.1",
     "moment-timezone": "^0.6.0",
+    "pg": "^8.23.1",
     "shoti": "^1.1.2",
     "ws": "^8.20.0",
     "youtubei": "^1.8.10"
@@ -28,6 +29,7 @@
     "@types/compression": "^1.8.1",
     "@types/express": "^5.0.3",
     "@types/node": "^22.13.11",
+    "@types/pg": "^8.23.1",
     "@types/ws": "^8.18.1",
     "tsc-alias": "^1.8.10",
     "tsx": "^4.19.2",
