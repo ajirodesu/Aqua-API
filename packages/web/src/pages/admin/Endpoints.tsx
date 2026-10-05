@@ -7,7 +7,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Power, Search } from 'lucide-react';
 import { adminRequest, AdminApiError } from '../../lib/adminApi';
 import type { AdminEndpointBucket } from '../../lib/adminTypes';
-import { Alert, EmptyRow, SectionHeader, SuccessNote, Switch } from '../../components/AdminUI';
+import { Alert, EmptyRow, SuccessNote, Switch } from '../../components/AdminUI';
 
 export function AdminEndpoints() {
   const [buckets, setBuckets] = useState<AdminEndpointBucket[]>([]);
@@ -33,11 +33,6 @@ export function AdminEndpoints() {
       cancelled = true;
     };
   }, []);
-
-  const counts = useMemo(() => {
-    const all = buckets.flatMap((b) => b.items);
-    return { total: all.length, enabled: all.filter((i) => i.enabled).length };
-  }, [buckets]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -73,11 +68,6 @@ export function AdminEndpoints() {
 
   return (
     <div className="flex animate-fade-in-up flex-col gap-4">
-      <SectionHeader
-        title="Endpoints"
-        hint={`${counts.enabled} of ${counts.total} enabled — disabled routes answer 404.`}
-      />
-
       {error && <Alert tone="error" title="Something went wrong" message={error} />}
       {notice && <SuccessNote message={notice} />}
 

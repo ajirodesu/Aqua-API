@@ -9,7 +9,7 @@ import { Activity, Bot, Clock, Database, Globe, Layers, Power, ShieldCheck } fro
 import { Link } from 'react-router-dom';
 import { adminRequest, AdminApiError } from '../../lib/adminApi';
 import type { AdminStats } from '../../lib/adminTypes';
-import { ActivityChart, Alert, SectionHeader, StatCard } from '../../components/AdminUI';
+import { ActivityChart, Alert, StatCard } from '../../components/AdminUI';
 
 function formatUptime(totalSeconds: number): string {
   const days = Math.floor(totalSeconds / 86400);
@@ -50,7 +50,6 @@ export function AdminStatsPage() {
   if (!stats) {
     return (
       <div className="flex animate-fade-in-up flex-col gap-4">
-        <SectionHeader title="Stats" />
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {[0, 1, 2, 3].map((i) => (
             <div key={i} className="h-[76px] animate-skeleton rounded-xl border border-hairline bg-surface-container-low" />
@@ -65,8 +64,6 @@ export function AdminStatsPage() {
 
   return (
     <div className="flex animate-fade-in-up flex-col gap-6">
-      <SectionHeader title="Stats" hint="Complete traffic and platform statistics." />
-
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard icon={<Activity className="h-5 w-5" />} label="Total requests" value={String(stats.totalRequests)} sub={`${stats.endpointTotal} endpoint hits`} />
         <StatCard icon={<Bot className="h-5 w-5" />} label="Endpoints" value={String(stats.totalEndpoints)} sub={`${stats.categories} categories`} />

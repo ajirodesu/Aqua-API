@@ -7,7 +7,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Pause, Play, Search } from 'lucide-react';
 import { adminRequest, adminStreamUrl, AdminApiError } from '../../lib/adminApi';
 import type { LogLevel, RequestLogEntry } from '../../lib/adminTypes';
-import { Alert, EmptyRow, SectionHeader } from '../../components/AdminUI';
+import { Alert, EmptyRow } from '../../components/AdminUI';
 
 const MAX_ROWS = 200;
 
@@ -30,7 +30,6 @@ export function AdminLogs() {
   const [search, setSearch] = useState('');
   const [live, setLive] = useState(true);
   const [paused, setPaused] = useState(false);
-  const [connected, setConnected] = useState(false);
   const [loadingOlder, setLoadingOlder] = useState(false);
   const [exhausted, setExhausted] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -60,12 +59,9 @@ export function AdminLogs() {
 
   useEffect(() => {
     if (!live || paused) {
-      setConnected(false);
       return;
     }
     const es = new EventSource(adminStreamUrl('/api/admin/logs/stream'));
-    es.onopen = () => setConnected(true);
-    es.onerror = () => setConnected(false);
     es.onmessage = (e: MessageEvent<string>) => {
       try {
         const entry = JSON.parse(e.data) as RequestLogEntry;
@@ -81,7 +77,6 @@ export function AdminLogs() {
     };
     return () => {
       es.close();
-      setConnected(false);
     };
   }, [live, paused]);
 
@@ -119,32 +114,26 @@ export function AdminLogs() {
 
   return (
     <div className="flex animate-fade-in-up flex-col gap-4">
-      <SectionHeader
-        title="Logs"
-        hint={connected ? 'Live stream connected' : live ? 'Connecting…' : 'Stream off — showing history'}
-        right={
-          <>
-            <button
-              type="button"
-              onClick={() => setPaused((p) => !p)}
-              className="btn-secondary h-10 rounded-lg !px-4 text-[13px]"
-              aria-pressed={paused}
-            >
-              {paused ? <Play className="h-3.5 w-3.5" /> : <Pause className="h-3.5 w-3.5" />}
-              {paused ? 'Resume' : 'Pause'}
-            </button>
-            <button
-              type="button"
-              onClick={() => setLive((v) => !v)}
-              className={live ? 'btn-primary h-10 rounded-lg !px-4 text-[13px]' : 'btn-secondary h-10 rounded-lg !px-4 text-[13px]'}
-              aria-pressed={live}
-            >
-              <span className={`h-1.5 w-1.5 rounded-full ${live && !paused ? 'bg-on-primary' : 'bg-surface-variant'}`} />
-              Live
-            </button>
-          </>
-        }
-      />
+      <div className="flex items-center justify-end gap-2">
+        <button
+          type="button"
+          onClick={() => setPaused((p) => !p)}
+          className="btn-secondary h-10 rounded-lg !px-4 text-[13px]"
+          aria-pressed={paused}
+        >
+          {paused ? <Play className="h-3.5 w-3.5" /> : <Pause className="h-3.5 w-3.5" />}
+          {paused ? 'Resume' : 'Pause'}
+        </button>
+        <button
+          type="button"
+          onClick={() => setLive((v) => !v)}
+          className={live ? 'btn-primary h-10 rounded-lg !px-4 text-[13px]' : 'btn-secondary h-10 rounded-lg !px-4 text-[13px]'}
+          aria-pressed={live}
+        >
+          <span className={`h-1.5 w-1.5 rounded-full ${live && !paused ? 'bg-on-primary' : 'bg-surface-variant'}`} />
+          Live
+        </button>
+      </div>
 
       {error && <Alert tone="error" title="Something went wrong" message={error} />}
 

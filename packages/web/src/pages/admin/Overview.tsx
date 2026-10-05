@@ -7,7 +7,7 @@ import { useEffect, useState } from 'react';
 import { Activity, Bot, Clock, Cpu, Database, Power, ShieldCheck } from 'lucide-react';
 import { adminRequest, AdminApiError } from '../../lib/adminApi';
 import type { ActivityHour, AdminStatus, RequestLogEntry } from '../../lib/adminTypes';
-import { ActivityChart, Alert, SectionHeader, StatCard } from '../../components/AdminUI';
+import { ActivityChart, Alert, StatCard } from '../../components/AdminUI';
 
 function formatUptime(totalSeconds: number): string {
   const days = Math.floor(totalSeconds / 86400);
@@ -59,8 +59,6 @@ export function AdminOverview() {
 
   return (
     <div className="flex animate-fade-in-up flex-col gap-6">
-      <SectionHeader title="Overview" hint="Live platform health and activity." />
-
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard icon={<Bot className="h-5 w-5" />} label="Endpoints" value={String(status.totalEndpoints)} sub={`${status.categories} categories`} />
         <StatCard icon={<Activity className="h-5 w-5" />} label="Endpoint hits (1h)" value={String(status.endpointLastHour)} sub={`${status.endpointTotal} total`} />

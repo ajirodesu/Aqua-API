@@ -7,7 +7,7 @@ import { useEffect, useState } from 'react';
 import { KeyRound, Save, Settings2 } from 'lucide-react';
 import { adminRequest, AdminApiError } from '../../lib/adminApi';
 import type { AdminSettings } from '../../lib/adminTypes';
-import { Alert, SectionHeader, SuccessNote, Switch } from '../../components/AdminUI';
+import { Alert, SuccessNote, Switch } from '../../components/AdminUI';
 
 export function AdminSettingsPage() {
   const [settings, setSettings] = useState<AdminSettings | null>(null);
@@ -69,7 +69,6 @@ export function AdminSettingsPage() {
   if (loading || !settings) {
     return (
       <div className="flex animate-fade-in-up flex-col gap-4">
-        <SectionHeader title="Settings" />
         <div className="h-[280px] animate-skeleton rounded-xl border border-hairline bg-surface-container-low" />
       </div>
     );
@@ -77,16 +76,12 @@ export function AdminSettingsPage() {
 
   return (
     <div className="flex animate-fade-in-up flex-col gap-4">
-      <SectionHeader
-        title="Settings"
-        hint="Site profile, maintenance mode, and key inventory."
-        right={
-          <button type="button" onClick={() => void save()} disabled={saving} className="btn-primary h-11 rounded-lg !px-5 text-[13px] disabled:opacity-[0.38]">
-            <Save className="h-4 w-4" />
-            {saving ? 'Saving…' : 'Save changes'}
-          </button>
-        }
-      />
+      <div className="flex justify-end">
+        <button type="button" onClick={() => void save()} disabled={saving} className="btn-primary h-11 rounded-lg !px-5 text-[13px] disabled:opacity-[0.38]">
+          <Save className="h-4 w-4" />
+          {saving ? 'Saving…' : 'Save changes'}
+        </button>
+      </div>
 
       {error && <Alert tone="error" title="Something went wrong" message={error} />}
       {notice && <SuccessNote message={notice} />}

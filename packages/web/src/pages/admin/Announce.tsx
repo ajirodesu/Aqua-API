@@ -7,7 +7,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { BellRing, Megaphone, Send, Trash2 } from 'lucide-react';
 import { adminRequest, AdminApiError } from '../../lib/adminApi';
 import type { AdminNotification } from '../../lib/adminTypes';
-import { Alert, Dialog, EmptyRow, SectionHeader, SuccessNote } from '../../components/AdminUI';
+import { Alert, Dialog, EmptyRow, SuccessNote } from '../../components/AdminUI';
 
 function timeAgo(ts: number): string {
   const diff = Date.now() - ts;
@@ -81,22 +81,18 @@ export function AdminAnnounce() {
 
   return (
     <div className="flex animate-fade-in-up flex-col gap-4">
-      <SectionHeader
-        title="Announce"
-        hint="Broadcast a notification to every API user — it appears in their bell instantly."
-        right={
-          items.length > 0 ? (
-            <button
-              type="button"
-              onClick={() => setConfirmClear(true)}
-              className="btn-secondary h-10 rounded-lg !px-4 text-[13px]"
-            >
-              <Trash2 className="h-3.5 w-3.5" />
-              Clear all
-            </button>
-          ) : undefined
-        }
-      />
+      {items.length > 0 && (
+        <div className="flex justify-end">
+          <button
+            type="button"
+            onClick={() => setConfirmClear(true)}
+            className="btn-secondary h-10 rounded-lg !px-4 text-[13px]"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+            Clear all
+          </button>
+        </div>
+      )}
 
       {error && <Alert tone="error" title="Something went wrong" message={error} />}
       {notice && <SuccessNote message={notice} />}
