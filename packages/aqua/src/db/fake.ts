@@ -13,6 +13,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { AquaDb, DbAdmin, DbNotification } from './index.js';
+import { decryptSetting, encryptSetting } from '../engine/crypto.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -75,10 +76,12 @@ export function createFakeDb(file?: string): AquaDb {
     kind: 'fake',
     ready: Promise.resolve(),
     async getSetting(key: string): Promise<string | null> {
-      return dump.settings[key] ?? null;
+      const stored = dump.settings[key] ?? null;
+      // Encrypted rows (enc:v1:…) decrypt here; legacy plaintext passes through.
+      return stored === null ? null : decryptSetting(stored);
     },
     async setSetting(key: string, value: string): Promise<void> {
-      dump.settings[key] = value;
+      dump.settings[key] = encryptSetting(value);
       persist();
     },
     async listNotifications(): Promise<DbNotification[]> {

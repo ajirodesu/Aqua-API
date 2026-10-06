@@ -10,6 +10,7 @@
 
 import pg from 'pg';
 import type { AquaDb, DbAdmin, DbNotification } from './index.js';
+import { decryptSetting, encryptSetting } from '../engine/crypto.js';
 
 const { Pool } = pg;
 
@@ -103,14 +104,16 @@ export function createNeonDb(): AquaDb {
         'SELECT value FROM aqua_kv WHERE key = $1 LIMIT 1',
         [key]
       );
-      return res.rows[0]?.value ?? null;
+      const stored = res.rows[0]?.value ?? null;
+      // Encrypted rows (enc:v1:…) decrypt here; legacy plaintext passes through.
+      return stored === null ? null : decryptSetting(stored);
     },
     async setSetting(key: string, value: string): Promise<void> {
       await ready;
       await pool.query(
         `INSERT INTO aqua_kv (key, value, updated_at) VALUES ($1, $2, NOW())
          ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()`,
-        [key, value]
+        [key, encryptSetting(value)]
       );
     },
     async listNotifications(): Promise<DbNotification[]> {

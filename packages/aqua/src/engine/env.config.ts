@@ -29,6 +29,10 @@ export interface EnvConfig {
   /** Shared secret required on `POST /api/notification`. Falls back to config.json's `key` field if unset. */
   API_KEY: string | undefined;
 
+  /** AES-256-GCM key (64 hex chars) for encrypting database settings at rest.
+   *  When unset, settings are stored as plaintext with a one-time warning. */
+  ENCRYPTION_KEY: string | undefined;
+
   /** Neon Postgres connection string. When set, the database layer uses
    * Neon (`pg` Pool, Persian-Bot neondb logic); otherwise the instant fake
    * database (memory + local JSON file) is used. Falls back to DATABASE_URL. */
@@ -84,6 +88,12 @@ const ENV_VAR_SPECS: EnvVarSpec[] = [
     usedBy: 'GET/POST /canvas/rankup, /canvas/greet (background=Dynamic) — secondary themed photo source, tried after Pixabay',
   },
   { key: 'GITHUB_TOKEN', optional: true, usedBy: 'GET/POST /random/shoti2 (reads/edits the Gist video store)' },
+  {
+    key: 'ENCRYPTION_KEY',
+    optional: true,
+    usedBy:
+      'AES-256-GCM encryption of database settings at rest (same enc:v1: format as Persian-Bot). Unset stores plaintext with a warning',
+  },
   { key: 'SHOTI_GIST_ID', optional: true, usedBy: 'GET/POST /random/shoti2 (falls back to the bundled gist ID)' },
   { key: 'SHOTI_GIST_FILENAME', optional: true, usedBy: 'GET/POST /random/shoti2 (falls back to "Shoti")' },
 ];
@@ -120,6 +130,8 @@ export const env: EnvConfig = {
   PORT: readNumber('PORT', 3000),
 
   API_KEY: readString('API_KEY'),
+
+  ENCRYPTION_KEY: readString('ENCRYPTION_KEY'),
 
   NEON_DATABASE_URL: readString('NEON_DATABASE_URL') ?? readString('DATABASE_URL'),
 

@@ -42,9 +42,6 @@ function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
           onClick={onNavigate}
           className="flex items-center gap-2.5 text-on-surface transition-opacity duration-fast hover:opacity-75"
         >
-          <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/15 font-mono text-[13px] font-bold text-primary">
-            A
-          </span>
           <span className="text-[17px] font-semibold leading-none tracking-tight">Aqua Admin</span>
         </Link>
       </div>
