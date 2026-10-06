@@ -2,6 +2,8 @@
 
 Fast, friendly REST API playground (canvas memes, random media, AI images) with interactive docs and an admin dashboard modeled on the Persian-Bot admin.
 
+> 📖 **Full guide & tutorial (every feature, every page, with screenshots): [`GUIDE.md`](GUIDE.md)**
+
 ## Run locally
 
 ```bash
