@@ -39,9 +39,12 @@ export interface SiteSettingsPatch {
   telegram?: string;
   github?: string;
   messenger?: string;
+  /** Hero GIF URL. Empty string removes the GIF from the public pages. */
+  gifUrl?: string;
 }
 
 const MAX_FIELD_LENGTH = 500;
+const MAX_URL_LENGTH = 2048;
 
 function clean(value: unknown): string | undefined {
   if (typeof value !== 'string') return undefined;
@@ -61,9 +64,11 @@ export function updateSiteConfig(patch: SiteSettingsPatch): AquaConfig {
   const telegram = clean(patch.telegram);
   const github = clean(patch.github);
   const messenger = clean(patch.messenger);
+  const gifUrl = patch.gifUrl === undefined ? undefined : patch.gifUrl.trim().slice(0, MAX_URL_LENGTH);
   if (name !== undefined) current.name = name;
   if (description !== undefined) current.description = description;
   if (status !== undefined) current.header = { ...current.header, status };
+  if (gifUrl !== undefined) current.header = { ...current.header, imageSrc: gifUrl === '' ? [] : [gifUrl] };
   if (telegram !== undefined) current.telegram = telegram;
   if (github !== undefined) current.github = github;
   if (messenger !== undefined) current.messenger = messenger;

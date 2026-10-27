@@ -39,7 +39,7 @@ import {
 import { getSiteConfig, updateSiteConfig } from './site-config.js';
 import { dbKind, getDb } from '../db/index.js';
 import { env } from './env.config.js';
-import type { EndpointBucket } from './types.js';
+import type { AquaConfig, EndpointBucket } from './types.js';
 
 export const adminRouter = Router();
 
@@ -325,13 +325,12 @@ function masked(value: string | undefined): { set: boolean; preview: string } {
   return { set: true, preview: value.length <= 8 ? '••••••••' : `${value.slice(0, 4)}••••••••` };
 }
 
-adminRouter.get('/settings', (req: Request, res: Response) => {
-  void req;
-  const config = getSiteConfig();
-  res.json({
+function settingsPayload(config: AquaConfig) {
+  return {
     name: config.name,
     description: config.description,
     status: config.header.status,
+    gifUrl: config.header.imageSrc?.[0] ?? '',
     telegram: config.telegram ?? '',
     github: config.github ?? '',
     messenger: config.messenger ?? '',
@@ -345,34 +344,61 @@ adminRouter.get('/settings', (req: Request, res: Response) => {
       UNSPLASH_ACCESS_KEY: masked(env.UNSPLASH_ACCESS_KEY),
       GITHUB_TOKEN: masked(env.GITHUB_TOKEN),
     },
-  });
+  };
+}
+
+function isHttpUrl(value: string): boolean {
+  try {
+    const parsed = new URL(value);
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
+adminRouter.get('/settings', (req: Request, res: Response) => {
+  void req;
+  res.json(settingsPayload(getSiteConfig()));
 });
 
 adminRouter.put('/settings', async (req: Request, res: Response) => {
-  if (req.body && typeof req.body === 'object' && 'maintenance' in req.body) {
-    if (typeof req.body.maintenance !== 'boolean') {
+  const body = (req.body ?? {}) as Record<string, unknown>;
+
+  if ('maintenance' in body) {
+    if (typeof body.maintenance !== 'boolean') {
       res.status(400).json({ error: 'Invalid maintenance flag' });
       return;
     }
-    adminStore.state.maintenance = req.body.maintenance;
+    adminStore.state.maintenance = body.maintenance;
     await adminStore.saveState();
   }
+
+  // Hero GIF: empty string clears it; otherwise require a direct http(s) URL.
+  const gifUrl = body['gifUrl'];
+  if (gifUrl !== undefined) {
+    if (typeof gifUrl !== 'string') {
+      res.status(400).json({ error: 'Invalid GIF URL' });
+      return;
+    }
+    const trimmed = gifUrl.trim();
+    if (trimmed.length > 2048) {
+      res.status(400).json({ error: 'GIF URL is too long (max 2048 characters)' });
+      return;
+    }
+    if (trimmed !== '' && !isHttpUrl(trimmed)) {
+      res.status(400).json({ error: 'GIF URL must be a direct http(s) link' });
+      return;
+    }
+  }
+
   const updated = updateSiteConfig({
-    name: asString(req.body?.name),
-    description: asString(req.body?.description),
-    status: asString(req.body?.status),
-    telegram: asString(req.body?.telegram),
-    github: asString(req.body?.github),
-    messenger: asString(req.body?.messenger),
+    name: asString(body['name']),
+    description: asString(body['description']),
+    status: asString(body['status']),
+    telegram: asString(body['telegram']),
+    github: asString(body['github']),
+    messenger: asString(body['messenger']),
+    gifUrl: typeof gifUrl === 'string' ? gifUrl : undefined,
   });
-  res.json({
-    name: updated.name,
-    description: updated.description,
-    status: updated.header.status,
-    telegram: updated.telegram ?? '',
-    github: updated.github ?? '',
-    messenger: updated.messenger ?? '',
-    operator: updated.operator,
-    maintenance: adminStore.state.maintenance,
-  });
+  res.json(settingsPayload(updated));
 });

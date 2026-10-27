@@ -38,9 +38,9 @@ export function ParamField({ param, value, onChange, method }: Props) {
   }
 
   return (
-    <div className="relative w-full">
+    <div className="relative w-full border-b border-hairline pb-5 last:border-b-0 last:pb-0">
       <div className="mb-2 flex items-baseline justify-between gap-2">
-        <label className="block text-[13px] font-medium text-on-surface">
+        <label className="block font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-on-surface-variant">
           {param.name}
           {param.required && <span className="ml-0.5 text-error">*</span>}
         </label>
@@ -48,17 +48,17 @@ export function ParamField({ param, value, onChange, method }: Props) {
           <button
             type="button"
             onClick={() => onChange(String(param.example))}
-            className="text-[11px] font-medium text-primary transition-colors hover:text-primary/80"
+            className="font-mono text-[10px] uppercase tracking-[0.08em] text-primary transition-colors duration-fast hover:text-primary/80"
           >
             use example
           </button>
         )}
       </div>
 
-      {param.desc && <p className="mb-2 mt-1.5 text-[13px] leading-snug text-on-surface-variant">{param.desc}</p>}
+      {param.desc && <p className="mb-2 text-body-sm leading-snug text-on-surface-variant">{param.desc}</p>}
 
       {type === 'select' && param.options ? (
-        <select value={value} onChange={(e) => onChange(e.target.value)} className="input-field appearance-none">
+        <select value={value} onChange={(e) => onChange(e.target.value)} className="input-field appearance-none font-mono text-[13px]">
           <option value="" disabled>
             Choose an option…
           </option>
@@ -90,21 +90,21 @@ export function ParamField({ param, value, onChange, method }: Props) {
               <button
                 type="button"
                 onClick={() => inputRef.current?.click()}
-                className="flex h-16 w-16 shrink-0 items-center justify-center rounded-input border-2 border-dashed border-outline-variant text-on-surface-variant transition-colors duration-fast hover:border-primary hover:text-primary"
+                className="flex h-16 w-16 shrink-0 items-center justify-center rounded-input border border-dashed border-outline-variant text-on-surface-variant transition-colors duration-fast hover:border-primary hover:text-primary"
               >
                 {value.startsWith('data:image') ? (
-                  <img src={value} alt="" className="h-full w-full rounded-compact object-cover" />
+                  <img src={value} alt="" className="h-full w-full rounded-[var(--radius-compact)] object-cover" />
                 ) : (
                   <ImageIcon className="h-6 w-6" strokeWidth={1.6} />
                 )}
               </button>
               <div className="flex-1">
-                <button type="button" onClick={() => inputRef.current?.click()} className="btn-secondary !px-4 !py-2 text-[13px]">
+                <button type="button" onClick={() => inputRef.current?.click()} className="btn-secondary !min-h-8 !px-3 !py-1.5">
                   <Upload className="h-3.5 w-3.5" strokeWidth={2} />
                   Choose {type}
                 </button>
                 {fileName && (
-                  <p className="mt-1.5 flex items-center gap-1 text-xs text-on-surface-variant">
+                  <p className="mt-1.5 flex items-center gap-1 font-mono text-[10px] uppercase tracking-[0.06em] text-on-surface-variant">
                     {fileName}
                     <button
                       type="button"

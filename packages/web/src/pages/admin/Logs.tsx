@@ -7,14 +7,15 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Pause, Play, Search } from 'lucide-react';
 import { adminRequest, adminStreamUrl, AdminApiError } from '../../lib/adminApi';
 import type { LogLevel, RequestLogEntry } from '../../lib/adminTypes';
-import { Alert, EmptyRow } from '../../components/AdminUI';
+import { Alert, EmptyRow, SectionHeader } from '../../components/AdminUI';
+import { cn } from '../../lib/cn';
 
 const MAX_ROWS = 200;
 
 function levelTone(level: LogLevel): string {
-  if (level === 'error') return 'border-error/20 bg-error/15 text-error';
-  if (level === 'warn') return 'border-warning/20 bg-warning/15 text-warning';
-  return 'border-primary/20 bg-primary/15 text-primary';
+  if (level === 'error') return 'border-error/30 bg-error-container text-on-error-container';
+  if (level === 'warn') return 'border-warning/30 bg-warning-container text-on-warning-container';
+  return 'border-primary/30 bg-primary-container text-on-primary-container';
 }
 
 function formatTime(ts: number): string {
@@ -114,32 +115,44 @@ export function AdminLogs() {
 
   return (
     <div className="flex animate-fade-in-up flex-col gap-4">
-      <div className="flex items-center justify-end gap-2">
-        <button
-          type="button"
-          onClick={() => setPaused((p) => !p)}
-          className="btn-secondary h-10 rounded-lg !px-4 text-[13px]"
-          aria-pressed={paused}
-        >
-          {paused ? <Play className="h-3.5 w-3.5" /> : <Pause className="h-3.5 w-3.5" />}
-          {paused ? 'Resume' : 'Pause'}
-        </button>
-        <button
-          type="button"
-          onClick={() => setLive((v) => !v)}
-          className={live ? 'btn-primary h-10 rounded-lg !px-4 text-[13px]' : 'btn-secondary h-10 rounded-lg !px-4 text-[13px]'}
-          aria-pressed={live}
-        >
-          <span className={`h-1.5 w-1.5 rounded-full ${live && !paused ? 'bg-on-primary' : 'bg-surface-variant'}`} />
-          Live
-        </button>
-      </div>
+      <SectionHeader
+        title="Request log"
+        hint="Live server-sent stream with level and source filters."
+        right={
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setPaused((p) => !p)}
+              className="btn-secondary !min-h-9 !px-3"
+              aria-pressed={paused}
+            >
+              {paused ? <Play className="h-3 w-3" strokeWidth={1.75} /> : <Pause className="h-3 w-3" strokeWidth={1.75} />}
+              {paused ? 'Resume' : 'Pause'}
+            </button>
+            <button
+              type="button"
+              onClick={() => setLive((v) => !v)}
+              className={live ? 'btn-primary !min-h-9 !px-3' : 'btn-secondary !min-h-9 !px-3'}
+              aria-pressed={live}
+            >
+              <span
+                className={cn(
+                  'h-1.5 w-1.5 shrink-0 rounded-[1px]',
+                  live && !paused ? 'bg-on-primary' : 'bg-on-surface-variant'
+                )}
+                aria-hidden="true"
+              />
+              Live
+            </button>
+          </div>
+        }
+      />
 
       {error && <Alert tone="error" title="Something went wrong" message={error} />}
 
       <div className="flex flex-wrap items-center gap-2">
         <div className="relative min-w-0 flex-1">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-on-surface-variant" />
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-on-surface-variant" strokeWidth={1.75} />
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -149,13 +162,23 @@ export function AdminLogs() {
             className="input-field min-w-0 !py-2 !pl-9 !pr-3 text-[13px] [&::-webkit-search-cancel-button]:hidden"
           />
         </div>
-        <select value={level} onChange={(e) => setLevel(e.target.value as '' | LogLevel)} aria-label="Filter by level" className="input-field w-auto !py-2 text-[13px]">
+        <select
+          value={level}
+          onChange={(e) => setLevel(e.target.value as '' | LogLevel)}
+          aria-label="Filter by level"
+          className="input-field w-auto !py-2 font-mono text-[11px] uppercase tracking-[0.04em]"
+        >
           <option value="">All levels</option>
           <option value="info">info</option>
           <option value="warn">warn</option>
           <option value="error">error</option>
         </select>
-        <select value={source} onChange={(e) => setSource(e.target.value)} aria-label="Filter by source" className="input-field w-auto !py-2 text-[13px]">
+        <select
+          value={source}
+          onChange={(e) => setSource(e.target.value)}
+          aria-label="Filter by source"
+          className="input-field w-auto !py-2 font-mono text-[11px] uppercase tracking-[0.04em]"
+        >
           <option value="">All sources</option>
           <option value="api">api</option>
           <option value="admin">admin</option>
@@ -163,11 +186,22 @@ export function AdminLogs() {
         </select>
       </div>
 
-      <div className="overflow-hidden rounded-xl border border-hairline bg-surface-container-lowest">
+      <section className="overflow-hidden border border-hairline bg-surface-container-lowest">
+        <header className="flex flex-wrap items-center justify-between gap-2 border-b border-hairline bg-surface-container-low px-4 py-2.5">
+          <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-on-surface-variant">STREAM / SSE</span>
+          <span className="flex items-center gap-2 font-mono text-[9px] uppercase tracking-[0.12em] text-on-surface-variant/80">
+            <span
+              className={cn('h-1.5 w-1.5 rounded-[1px]', live && !paused ? 'bg-success' : 'bg-on-surface-variant/50')}
+              aria-hidden="true"
+            />
+            {visible.length} rows · {live && !paused ? 'live' : 'paused'}
+          </span>
+        </header>
+
         {loading ? (
           <div className="space-y-1.5 p-3">
             {[0, 1, 2, 3].map((i) => (
-              <div key={i} className="h-8 animate-skeleton rounded-input bg-surface-container-high" />
+              <div key={i} className="h-7 animate-skeleton bg-surface-container-high" />
             ))}
           </div>
         ) : visible.length === 0 ? (
@@ -175,25 +209,33 @@ export function AdminLogs() {
             <EmptyRow icon={<Search className="h-5 w-5" />} title="No log entries" body="Traffic will appear here as requests arrive." />
           </div>
         ) : (
-          <ul className="max-h-[560px] divide-y divide-outline-variant overflow-y-auto p-2">
+          <ul className="max-h-[560px] overflow-y-auto">
             {visible.map((e) => (
-              <li key={e.id} className="flex items-center gap-2 rounded-input px-2 py-1.5 font-mono text-xs">
-                <span className="shrink-0 text-surface-variant">{formatTime(e.timestamp)}</span>
-                <span className={`shrink-0 rounded-badge border px-1.5 py-0.5 font-semibold ${levelTone(e.level)}`}>
+              <li
+                key={e.id}
+                className="flex items-center gap-2 border-b border-hairline px-3 py-1.5 font-mono text-[11px] last:border-b-0 hover:bg-surface-container-low"
+              >
+                <span className="w-[4.25rem] shrink-0 tabular-nums text-on-surface-variant/70">{formatTime(e.timestamp)}</span>
+                <span className={cn('shrink-0 rounded-badge border px-1.5 py-0.5 font-semibold tabular-nums', levelTone(e.level))}>
                   {e.status}
                 </span>
-                <span className="shrink-0 text-primary">{e.method}</span>
+                <span className="w-10 shrink-0 text-primary">{e.method}</span>
                 <span className="min-w-0 flex-1 truncate text-on-surface">{e.path}</span>
-                <span className="shrink-0 text-surface-variant">{e.durationMs}ms</span>
+                <span className="w-12 shrink-0 text-right tabular-nums text-on-surface-variant/70">{e.durationMs}ms</span>
               </li>
             ))}
             <div ref={bottomRef} />
           </ul>
         )}
-      </div>
+      </section>
 
       {!loading && !exhausted && entries.length > 0 && (
-        <button type="button" onClick={() => void loadOlder()} disabled={loadingOlder} className="btn-secondary h-10 self-center rounded-lg text-[13px] disabled:opacity-[0.38]">
+        <button
+          type="button"
+          onClick={() => void loadOlder()}
+          disabled={loadingOlder}
+          className="btn-secondary self-center"
+        >
           {loadingOlder ? 'Loading…' : 'Load older'}
         </button>
       )}

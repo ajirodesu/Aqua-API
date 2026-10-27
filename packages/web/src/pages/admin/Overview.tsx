@@ -7,7 +7,9 @@ import { useEffect, useState } from 'react';
 import { Activity, Bot, Clock, Cpu, Database, Power, ShieldCheck } from 'lucide-react';
 import { adminRequest, AdminApiError } from '../../lib/adminApi';
 import type { ActivityHour, AdminStatus, RequestLogEntry } from '../../lib/adminTypes';
-import { ActivityChart, Alert, StatCard } from '../../components/AdminUI';
+import { ActivityChart, Alert, SectionHeader, StatCard } from '../../components/AdminUI';
+import { H_SHELL_SCOPE } from '../../lib/shell';
+import { cn } from '../../lib/cn';
 
 function formatUptime(totalSeconds: number): string {
   const days = Math.floor(totalSeconds / 86400);
@@ -16,6 +18,32 @@ function formatUptime(totalSeconds: number): string {
   if (days > 0) return `${days}d ${hours}h`;
   if (hours > 0) return `${hours}h ${mins}m`;
   return `${mins}m`;
+}
+
+function Panel({
+  title,
+  meta,
+  children,
+}: {
+  title: string;
+  meta?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="min-w-0 border border-hairline bg-surface-container-low">
+      <header className="flex items-center justify-between gap-3 border-b border-hairline px-4 py-2.5">
+        <h2 className="min-w-0 truncate font-brand text-title-md uppercase tracking-[0.06em] text-on-surface">
+          {title}
+        </h2>
+        {meta && (
+          <span className="shrink-0 font-mono text-[9px] uppercase tracking-[0.14em] text-on-surface-variant/80">
+            {meta}
+          </span>
+        )}
+      </header>
+      <div className="p-4">{children}</div>
+    </section>
+  );
 }
 
 export function AdminOverview() {
@@ -46,20 +74,41 @@ export function AdminOverview() {
     };
   }, []);
 
-  if (error) return <Alert tone="error" title="Could not load overview" message={error} />;
+  const header = (
+    <SectionHeader
+      title="System overview"
+      hint="Live service status, request activity, and recent warnings."
+      right={<span className={H_SHELL_SCOPE}>REV 02</span>}
+    />
+  );
+
+  if (error) {
+    return (
+      <div className="flex flex-col gap-5">
+        {header}
+        <Alert tone="error" title="Could not load overview" message={error} />
+      </div>
+    );
+  }
+
   if (!status) {
     return (
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {[0, 1, 2, 3].map((i) => (
-          <div key={i} className="h-[76px] animate-skeleton rounded-xl border border-hairline bg-surface-container-low" />
-        ))}
+      <div className="flex flex-col gap-5">
+        {header}
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {[0, 1, 2, 3].map((i) => (
+            <div key={i} className="h-[88px] animate-skeleton border border-hairline bg-surface-container-low" />
+          ))}
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="flex animate-fade-in-up flex-col gap-6">
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <div className="flex animate-fade-in-up flex-col gap-5">
+      {header}
+
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard icon={<Bot className="h-5 w-5" />} label="Endpoints" value={String(status.totalEndpoints)} sub={`${status.categories} categories`} />
         <StatCard icon={<Activity className="h-5 w-5" />} label="Endpoint hits (1h)" value={String(status.endpointLastHour)} sub={`${status.endpointTotal} total`} />
         <StatCard icon={<Clock className="h-5 w-5" />} label="Uptime" value={formatUptime(status.uptimeSeconds)} sub={`${status.memoryMb} MB heap`} />
@@ -67,58 +116,69 @@ export function AdminOverview() {
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <div className="rounded-xl border border-hairline bg-surface-container-low p-4">
-          <h2 className="text-[13px] font-semibold text-on-surface">Activity — last 24h</h2>
-          <p className="mb-3 text-xs text-on-surface-variant">Endpoint hits per hour (admin traffic excluded)</p>
+        <Panel title="Activity" meta="LAST 24H">
+          <p className="mb-3 text-body-sm text-on-surface-variant">Endpoint hits per hour (admin traffic excluded).</p>
           <ActivityChart hours={hours} />
-        </div>
+        </Panel>
 
         <div className="flex flex-col gap-4">
-          <div className="rounded-xl border border-hairline bg-surface-container-low p-4">
-            <h2 className="text-[13px] font-semibold text-on-surface">System health</h2>
-            <ul className="mt-3 space-y-2.5 text-[13px]">
-              <li className="flex items-center gap-2.5 text-on-surface-variant">
-                <Database className="h-4 w-4 text-primary" />
+          <Panel title="System health" meta="RUNTIME">
+            <ul className="border-t border-hairline">
+              <li className="flex items-center gap-2.5 border-b border-hairline py-2.5 text-body-sm text-on-surface-variant last:border-b-0">
+                <Database className="h-3.5 w-3.5 shrink-0 text-primary" strokeWidth={1.75} />
                 Database
-                <span className="ml-auto font-mono text-xs text-on-surface">{status.db}{status.db === 'fake' ? ' (instant)' : ''}</span>
+                <span className="ml-auto font-mono text-[11px] text-on-surface">
+                  {status.db}
+                  {status.db === 'fake' ? ' (instant)' : ''}
+                </span>
               </li>
-              <li className="flex items-center gap-2.5 text-on-surface-variant">
-                <Cpu className="h-4 w-4 text-primary" />
+              <li className="flex items-center gap-2.5 border-b border-hairline py-2.5 text-body-sm text-on-surface-variant last:border-b-0">
+                <Cpu className="h-3.5 w-3.5 shrink-0 text-primary" strokeWidth={1.75} />
                 Memory
-                <span className="ml-auto font-mono text-xs text-on-surface">{status.memoryMb} MB</span>
+                <span className="ml-auto font-mono text-[11px] text-on-surface">{status.memoryMb} MB</span>
               </li>
-              <li className="flex items-center gap-2.5 text-on-surface-variant">
-                <Power className="h-4 w-4 text-primary" />
+              <li className="flex items-center gap-2.5 border-b border-hairline py-2.5 text-body-sm text-on-surface-variant last:border-b-0">
+                <Power className="h-3.5 w-3.5 shrink-0 text-primary" strokeWidth={1.75} />
                 Disabled endpoints
-                <span className="ml-auto font-mono text-xs text-on-surface">{status.disabledEndpoints}</span>
+                <span className="ml-auto font-mono text-[11px] text-on-surface">{status.disabledEndpoints}</span>
               </li>
-              <li className="flex items-center gap-2.5 text-on-surface-variant">
-                <ShieldCheck className="h-4 w-4 text-primary" />
+              <li className="flex items-center gap-2.5 border-b border-hairline py-2.5 text-body-sm text-on-surface-variant last:border-b-0">
+                <ShieldCheck className="h-3.5 w-3.5 shrink-0 text-primary" strokeWidth={1.75} />
                 Maintenance
-                <span className={`ml-auto font-mono text-xs ${status.maintenance ? 'text-warning' : 'text-success'}`}>
+                <span className={cn('ml-auto font-mono text-[11px] uppercase', status.maintenance ? 'text-warning' : 'text-success')}>
                   {status.maintenance ? 'ON' : 'OFF'}
                 </span>
               </li>
             </ul>
-          </div>
+          </Panel>
 
-          <div className="rounded-xl border border-hairline bg-surface-container-low p-4">
-            <h2 className="text-[13px] font-semibold text-on-surface">Recent warnings & errors</h2>
+          <Panel title="Recent warnings" meta="LAST 5">
             {recentErrors.length === 0 ? (
-              <p className="mt-2 text-[13px] text-on-surface-variant">Nothing but clean 2xx traffic lately.</p>
+              <p className="font-mono text-[10px] uppercase tracking-[0.1em] text-on-surface-variant">
+                Nothing but clean 2xx traffic lately.
+              </p>
             ) : (
-              <ul className="mt-2 space-y-1.5">
+              <ul className="border-t border-hairline">
                 {recentErrors.map((e) => (
-                  <li key={e.id} className="flex items-center gap-2 font-mono text-xs">
-                    <span className={`rounded-badge border px-1.5 py-0.5 font-semibold ${e.level === 'error' ? 'border-error/20 bg-error/15 text-error' : 'border-warning/20 bg-warning/15 text-warning'}`}>
+                  <li key={e.id} className="flex items-center gap-2 border-b border-hairline py-2 font-mono text-[11px] last:border-b-0">
+                    <span
+                      className={cn(
+                        'shrink-0 rounded-badge border px-1.5 py-0.5 font-semibold tabular-nums',
+                        e.level === 'error'
+                          ? 'border-error/30 bg-error-container text-on-error-container'
+                          : 'border-warning/30 bg-warning-container text-on-warning-container'
+                      )}
+                    >
                       {e.status}
                     </span>
-                    <span className="truncate text-on-surface-variant">{e.method} {e.path}</span>
+                    <span className="min-w-0 truncate text-on-surface-variant">
+                      {e.method} {e.path}
+                    </span>
                   </li>
                 ))}
               </ul>
             )}
-          </div>
+          </Panel>
         </div>
       </div>
     </div>

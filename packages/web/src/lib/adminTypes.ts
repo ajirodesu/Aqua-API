@@ -91,6 +91,7 @@ export interface AdminSettings {
   name: string;
   description: string;
   status: string;
+  gifUrl: string;
   telegram: string;
   github: string;
   messenger: string;

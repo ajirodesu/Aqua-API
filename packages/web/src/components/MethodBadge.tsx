@@ -4,19 +4,19 @@ interface Props {
 }
 
 const TONE: Record<string, string> = {
-  GET: 'bg-success/15 text-success border-success/20',
-  POST: 'bg-primary/15 text-primary border-primary/20',
-  PUT: 'bg-warning/15 text-warning border-warning/20',
-  DELETE: 'bg-error/15 text-error border-error/20',
+  GET: 'border-success/30 bg-success-container text-on-success-container',
+  POST: 'border-primary/30 bg-primary-container text-on-primary-container',
+  PUT: 'border-warning/30 bg-warning-container text-on-warning-container',
+  DELETE: 'border-error/30 bg-error-container text-on-error-container',
 };
 
 export function MethodBadge({ method, size = 'sm' }: Props) {
   const upper = method.toUpperCase();
-  const tone = TONE[upper] ?? 'bg-secondary/15 text-on-surface-variant border-hairline';
-  const sizeCls = size === 'sm' ? 'px-2 py-0.5 text-[11px]' : 'px-2.5 py-1 text-xs';
+  const tone = TONE[upper] ?? 'border-outline-variant bg-surface-container-high text-on-surface-variant';
+  const sizeCls = size === 'sm' ? 'px-1.5 py-0.5 text-[10px]' : 'px-2 py-1 text-[11px]';
   return (
     <span
-      className={`inline-flex items-center rounded-badge border font-mono font-semibold uppercase tracking-wider ${sizeCls} ${tone}`}
+      className={`inline-flex shrink-0 items-center rounded-[var(--radius-badge)] border font-mono font-semibold uppercase tracking-[0.08em] ${sizeCls} ${tone}`}
     >
       {upper}
     </span>

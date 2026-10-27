@@ -1,21 +1,50 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 
-export type AppTheme = 'aqua' | 'burnt' | 'indigo';
+/**
+ * Available UI themes — the Persian-Bot colorways.
+ * - 'emerald'  — gemstone emerald on charcoal (default)
+ * - 'jasper'   — warm jasper rust on warm ink
+ * - 'amethyst' — amethyst violet on cold ink
+ *
+ * Shape, spacing and typography are identical across all three; only color
+ * roles change. Persisted under Aqua's existing key so returning users keep
+ * a working preference; legacy names are migrated in place.
+ */
+export type AppTheme = 'emerald' | 'jasper' | 'amethyst';
 
 const STORAGE_KEY = 'aqua-ui-theme';
-const DEFAULT_THEME: AppTheme = 'aqua';
-const THEME_ORDER: readonly AppTheme[] = ['aqua', 'burnt', 'indigo'];
+const DEFAULT_THEME: AppTheme = 'emerald';
+const THEME_ORDER: readonly AppTheme[] = ['emerald', 'jasper', 'amethyst'];
+
+const LEGACY_THEME_MAP: Readonly<Record<string, AppTheme>> = {
+  aqua: 'emerald',
+  burnt: 'jasper',
+  indigo: 'amethyst',
+};
+
+const THEME_COLOR: Record<AppTheme, string> = {
+  emerald: '#0F1112',
+  jasper: '#110E0C',
+  amethyst: '#0E1116',
+};
 
 function isAppTheme(value: string | null): value is AppTheme {
-  return value === 'aqua' || value === 'burnt' || value === 'indigo';
+  return value === 'emerald' || value === 'jasper' || value === 'amethyst';
 }
 
 function getInitialTheme(): AppTheme {
   if (typeof window === 'undefined') return DEFAULT_THEME;
+
   const stored = window.localStorage.getItem(STORAGE_KEY);
+  const legacy = stored !== null && Object.hasOwn(LEGACY_THEME_MAP, stored) ? LEGACY_THEME_MAP[stored] : undefined;
+  if (legacy) return legacy;
   if (isAppTheme(stored)) return stored;
+
   const attr = document.documentElement.getAttribute('data-theme');
-  return isAppTheme(attr) ? attr : DEFAULT_THEME;
+  if (isAppTheme(attr)) return attr;
+  if (attr !== null && Object.hasOwn(LEGACY_THEME_MAP, attr)) return LEGACY_THEME_MAP[attr];
+
+  return DEFAULT_THEME;
 }
 
 interface ThemeContextValue {
@@ -33,11 +62,13 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     document.documentElement.setAttribute('data-theme', theme);
     document.documentElement.classList.add('dark');
     window.localStorage.setItem(STORAGE_KEY, theme);
+
     const meta = document.querySelector('meta[name="theme-color"]');
-    const map: Record<AppTheme, string> = { aqua: '#0A0C0E', burnt: '#111110', indigo: '#0B0714' };
-    if (meta) meta.setAttribute('content', map[theme]);
+    if (meta) meta.setAttribute('content', THEME_COLOR[theme]);
   }, [theme]);
 
+  // Scrollbars sit faint at rest and go solid while scrolling — capture phase
+  // so nested overflow containers (docs rail, log console) participate too.
   const scrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
     const handleScroll = () => {

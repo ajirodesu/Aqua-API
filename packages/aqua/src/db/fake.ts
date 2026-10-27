@@ -12,7 +12,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import type { AquaDb, DbAdmin, DbNotification } from './index.js';
+import type { AquaDb, DbAdmin, DbEndpointHit, DbNotification } from './index.js';
 import { decryptSetting, encryptSetting } from '../engine/crypto.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -22,6 +22,8 @@ interface FakeDump {
   settings: Record<string, string>;
   notifications: DbNotification[];
   admins: DbAdmin[];
+  /** Persistent per-route hit counters (route path → successful calls). */
+  hits: Record<string, number>;
 }
 
 function defaultFile(): string {
@@ -35,9 +37,18 @@ function loadDump(file: string): FakeDump {
       settings: typeof parsed.settings === 'object' && parsed.settings !== null ? parsed.settings : {},
       notifications: Array.isArray(parsed.notifications) ? parsed.notifications : [],
       admins: Array.isArray(parsed.admins) ? parsed.admins : [],
+      hits:
+        typeof parsed.hits === 'object' && parsed.hits !== null
+          ? Object.fromEntries(
+              Object.entries(parsed.hits).filter(
+                (entry): entry is [string, number] =>
+                  typeof entry[1] === 'number' && Number.isFinite(entry[1])
+              )
+            )
+          : {},
     };
   } catch {
-    return { settings: {}, notifications: [], admins: [] };
+    return { settings: {}, notifications: [], admins: [], hits: {} };
   }
 }
 
@@ -59,6 +70,7 @@ export function createFakeDb(file?: string): AquaDb {
         },
       ],
       admins: [],
+      hits: dump.hits,
     };
     persist();
   }
@@ -110,6 +122,17 @@ export function createFakeDb(file?: string): AquaDb {
       }
       dump.admins.push({ ...admin });
       persist();
+    },
+    async recordEndpointHit(path: string): Promise<void> {
+      dump.hits[path] = (dump.hits[path] ?? 0) + 1;
+      persist();
+    },
+    async getTopEndpoints(limit: number): Promise<DbEndpointHit[]> {
+      const safeLimit = Math.max(1, Math.min(Math.floor(limit) || 5, 50));
+      return Object.entries(dump.hits)
+        .map(([path, count]) => ({ path, count }))
+        .sort((a, b) => b.count - a.count || (a.path < b.path ? -1 : 1))
+        .slice(0, safeLimit);
     },
     async ping(): Promise<{ ok: boolean; latencyMs: number }> {
       return { ok: true, latencyMs: 0 };

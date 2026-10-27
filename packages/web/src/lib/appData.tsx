@@ -49,6 +49,27 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     [buckets]
   );
 
+  // Admin settings can change the hero GIF, name, and status. Refresh the
+  // cached public config in place so client-side navigation shows the update
+  // without a full reload.
+  useEffect(() => {
+    let alive = true;
+    const refresh = () => {
+      fetchConfig()
+        .then((cfg) => {
+          if (alive) setConfig(cfg);
+        })
+        .catch(() => {
+          // Keep the last good config; the next reload will retry.
+        });
+    };
+    window.addEventListener('aqua:site-config-updated', refresh);
+    return () => {
+      alive = false;
+      window.removeEventListener('aqua:site-config-updated', refresh);
+    };
+  }, []);
+
   const findEndpoint = useMemo(() => {
     return (category: string, name: string) =>
       buckets

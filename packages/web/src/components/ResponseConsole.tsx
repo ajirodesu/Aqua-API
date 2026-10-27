@@ -29,11 +29,12 @@ export function ResponseConsole({ result }: { result: ExecuteResult | null }) {
 
   if (!result) {
     return (
-      <div className="flex h-full min-h-[220px] flex-col items-center justify-center gap-2 rounded-card border border-hairline bg-surface-container p-10 text-center">
-        <span className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-on-surface/10">
-          <Clock className="h-5 w-5 text-surface-variant" />
+      <div className="flex h-full min-h-[260px] flex-col items-center justify-center gap-3 rounded-card border border-hairline bg-surface-container-low p-10 text-center">
+        <span className="flex h-10 w-10 items-center justify-center border border-hairline bg-surface-container-high text-on-surface-variant">
+          <Clock className="h-4 w-4" strokeWidth={1.75} />
         </span>
-        <p className="text-sm text-on-surface-variant">Run the request to see the response here.</p>
+        <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-on-surface-variant">Awaiting request</p>
+        <p className="max-w-xs text-body-sm text-on-surface-variant/80">Run the request to print a response here.</p>
       </div>
     );
   }
@@ -45,26 +46,28 @@ export function ResponseConsole({ result }: { result: ExecuteResult | null }) {
   }
 
   return (
-    <div className="overflow-hidden rounded-card border border-hairline bg-surface-container-low shadow-card-rest">
-      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5 border-b border-outline-variant bg-surface-container-low px-4 py-2.5">
+    <div className="overflow-hidden rounded-card border border-hairline bg-surface-container-low">
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5 border-b border-hairline bg-surface-container-low px-4 py-2.5">
         <div className="flex min-w-0 items-center gap-2">
           {result.ok ? (
-            <CheckCircle2 className="h-4 w-4 shrink-0 text-success" />
+            <CheckCircle2 className="h-4 w-4 shrink-0 text-success" strokeWidth={1.75} />
           ) : (
-            <XCircle className="h-4 w-4 shrink-0 text-error" />
+            <XCircle className="h-4 w-4 shrink-0 text-error" strokeWidth={1.75} />
           )}
-          <span className={`shrink-0 font-mono text-[13px] font-semibold ${result.ok ? 'text-success' : 'text-error'}`}>
+          <span className={`shrink-0 font-mono text-[12px] font-semibold tabular-nums ${result.ok ? 'text-success' : 'text-error'}`}>
             {result.status}
           </span>
-          <span className="truncate text-xs text-on-surface-variant">{result.contentType.split(';')[0]}</span>
+          <span className="font-mono text-[10px] uppercase tracking-[0.06em] text-on-surface-variant">
+            {result.contentType.split(';')[0]}
+          </span>
         </div>
-        <div className="flex shrink-0 items-center gap-3 text-xs text-on-surface-variant">
-          <span className="font-mono">{result.durationMs}ms</span>
+        <div className="flex shrink-0 items-center gap-3 font-mono text-[10px] uppercase tracking-[0.06em] text-on-surface-variant">
+          <span>{result.durationMs}ms</span>
           {result.blobUrl ? (
             <a
               href={result.blobUrl}
               download={downloadName(result.contentType)}
-              className="flex items-center gap-1 rounded-input px-1.5 py-1 text-on-surface-variant transition-colors duration-fast hover:bg-on-surface/10 hover:text-on-surface"
+              className="flex items-center gap-1 rounded-[var(--radius-compact)] px-1.5 py-1 transition-colors duration-fast hover:bg-on-surface/[0.08] hover:text-on-surface"
             >
               <Download className="h-3.5 w-3.5" />
               Download
@@ -74,7 +77,7 @@ export function ResponseConsole({ result }: { result: ExecuteResult | null }) {
               <button
                 type="button"
                 onClick={copy}
-                className="flex w-[68px] shrink-0 items-center justify-center gap-1 rounded-input px-1.5 py-1 text-on-surface-variant transition-colors duration-fast hover:bg-on-surface/10 hover:text-on-surface"
+                className="flex w-[72px] shrink-0 items-center justify-center gap-1 rounded-[var(--radius-compact)] px-1.5 py-1 transition-colors duration-fast hover:bg-on-surface/[0.08] hover:text-on-surface"
               >
                 <Copy className="h-3.5 w-3.5 shrink-0" />
                 <span>{copied ? 'Copied' : 'Copy'}</span>

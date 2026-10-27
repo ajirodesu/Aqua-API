@@ -23,6 +23,12 @@ export interface DbAdmin {
   createdAt: number;
 }
 
+export interface DbEndpointHit {
+  /** Route path without query string, e.g. "/canvas/bonk". */
+  path: string;
+  count: number;
+}
+
 export interface AquaDb {
   kind: 'neon' | 'fake';
   /** Resolves when schema/persistence is ready. Await before first query. */
@@ -36,6 +42,10 @@ export interface AquaDb {
   listAdmins(): Promise<Omit<DbAdmin, 'passwordHash'>[]>;
   findAdminByUsername(username: string): Promise<DbAdmin | null>;
   createAdmin(admin: DbAdmin): Promise<void>;
+  /** Fire-and-forget friendly: bumps the persistent hit counter for a route. */
+  recordEndpointHit(path: string): Promise<void>;
+  /** Most-called routes, highest first. Powers the docs "Top 5" section. */
+  getTopEndpoints(limit: number): Promise<DbEndpointHit[]>;
   ping(): Promise<{ ok: boolean; latencyMs: number }>;
 }
 

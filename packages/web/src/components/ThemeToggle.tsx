@@ -1,21 +1,22 @@
-import { Droplets, Flame, Moon } from 'lucide-react';
+import { Check } from 'lucide-react';
 import { useTheme, type AppTheme } from '../lib/theme';
 
-const OPTIONS: { id: AppTheme; label: string; Icon: typeof Droplets }[] = [
-  { id: 'aqua', label: 'Aqua', Icon: Droplets },
-  { id: 'burnt', label: 'Burnt', Icon: Flame },
-  { id: 'indigo', label: 'Indigo', Icon: Moon },
+const OPTIONS: { id: AppTheme; label: string; dot: string }[] = [
+  { id: 'emerald', label: 'Emerald', dot: 'bg-primary/80' },
+  { id: 'jasper', label: 'Jasper', dot: 'theme-dot-jasper' },
+  { id: 'amethyst', label: 'Amethyst', dot: 'theme-dot-amethyst' },
 ];
 
-export function ThemeToggle({ compact = false }: { compact?: boolean }) {
+export function ThemeToggle() {
   const { theme, setTheme } = useTheme();
+
   return (
     <div
       role="radiogroup"
-      aria-label="Color theme"
-      className="flex w-full items-center gap-1 rounded-input border border-hairline bg-surface-container-high p-1"
+      aria-label="Interface theme"
+      className="grid grid-cols-3 gap-2"
     >
-      {OPTIONS.map(({ id, label, Icon }) => {
+      {OPTIONS.map(({ id, label, dot }) => {
         const active = theme === id;
         return (
           <button
@@ -23,17 +24,24 @@ export function ThemeToggle({ compact = false }: { compact?: boolean }) {
             type="button"
             role="radio"
             aria-checked={active}
-            title={label}
             aria-label={`${label} theme`}
+            title={label}
             onClick={() => setTheme(id)}
-            className={`flex h-9 flex-1 items-center justify-center rounded-compact transition-all duration-fast ease-standard focus-visible:outline-none ${
+            className={`relative flex min-w-0 flex-col items-center justify-center gap-1.5 rounded-[var(--radius-card)] border px-1.5 py-2 transition-colors duration-fast focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
               active
-                ? 'bg-primary text-on-primary shadow-elevation-1'
-                : 'text-on-surface-variant hover:bg-on-surface/10 hover:text-on-surface'
+                ? 'border-primary bg-primary/10 text-primary'
+                : 'border-hairline bg-surface-container-high text-on-surface-variant hover:text-on-surface'
             }`}
           >
-            <Icon className="h-4 w-4" strokeWidth={2.2} />
-            {!compact && <span className="sr-only">{label}</span>}
+            {active && (
+              <Check
+                className="absolute right-1 top-1 h-2.5 w-2.5 shrink-0"
+                strokeWidth={2.5}
+                aria-hidden="true"
+              />
+            )}
+            <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${dot}`} aria-hidden="true" />
+            <span className="truncate text-[10px] leading-none">{label}</span>
           </button>
         );
       })}

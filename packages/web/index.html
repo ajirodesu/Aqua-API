@@ -1,28 +1,24 @@
 <!doctype html>
-<html lang="en" class="dark" data-theme="aqua">
+<html lang="en" class="dark" data-theme="emerald">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <meta name="theme-color" content="#0A0C0E" />
+    <meta name="theme-color" content="#0F1112" />
     <title>Aqua APIs — Simple and easy to use</title>
     <meta name="description" content="Aqua APIs: a fast, friendly REST API playground and documentation." />
     <link rel="icon" type="image/png" href="/icon.png" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
-      rel="stylesheet"
-    />
     <script>
       try {
         var t = localStorage.getItem('aqua-ui-theme');
-        if (t === 'aqua' || t === 'burnt' || t === 'indigo') {
+        var legacy = { aqua: 'emerald', burnt: 'jasper', indigo: 'amethyst' };
+        if (legacy[t]) t = legacy[t];
+        if (t === 'emerald' || t === 'jasper' || t === 'amethyst') {
           document.documentElement.setAttribute('data-theme', t);
         } else {
-          document.documentElement.setAttribute('data-theme', 'aqua');
+          document.documentElement.setAttribute('data-theme', 'emerald');
         }
       } catch (e) {
-        document.documentElement.setAttribute('data-theme', 'aqua');
+        document.documentElement.setAttribute('data-theme', 'emerald');
       }
     </script>
   </head>

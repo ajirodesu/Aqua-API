@@ -29,6 +29,17 @@ export function fetchEndpoints(): Promise<{ status: boolean; count: number; endp
   return getJSON('/api/endpoints');
 }
 
+export interface TopEndpoint {
+  /** Route path without query string, e.g. "/canvas/bonk". */
+  path: string;
+  /** Successful calls recorded in the database. */
+  count: number;
+}
+
+export function fetchTopEndpoints(limit = 5): Promise<{ status: boolean; top: TopEndpoint[] }> {
+  return getJSON(`/api/top-endpoints?limit=${limit}`);
+}
+
 export function fetchNotifications(): Promise<{ notifications: AquaConfig['notification'] }> {
   return getJSON('/api/notifications');
 }

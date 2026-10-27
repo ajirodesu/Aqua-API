@@ -1,0 +1,284 @@
+/* ============================================================
+   CUSTOM UTILITY CLASSES
+   
+   Extends Tailwind's utility layer with scrollbar control
+   classes. These complement the global scrollbar normalization
+   in base.css by offering explicit opt-in/opt-out per element.
+   
+   Three scrollbar states:
+   - .scrollbar         → Explicit styled scrollbar (backward compat)
+   - .scrollbar-default → Reset to browser native scrollbar
+   - .scrollbar-hidden  → Hide scrollbar, preserve scroll function
+   ============================================================ */
+
+@layer utilities {
+  /* Platform identity — the only sanctioned place brand hues live. */
+  .platform-text-discord {
+    color: rgb(var(--platform-discord));
+  }
+  .platform-text-telegram {
+    color: rgb(var(--platform-telegram));
+  }
+  .platform-tile-discord {
+    color: rgb(var(--platform-discord));
+    border-color: rgb(var(--platform-discord) / 0.32);
+    background-color: rgb(var(--platform-discord) / 0.12);
+  }
+  .platform-tile-telegram {
+    color: rgb(var(--platform-telegram));
+    border-color: rgb(var(--platform-telegram) / 0.32);
+    background-color: rgb(var(--platform-telegram) / 0.12);
+  }
+  .theme-dot-jasper {
+    background-color: rgb(var(--accent-jasper) / 0.8);
+  }
+  .theme-dot-amethyst {
+    background-color: rgb(var(--accent-amethyst) / 0.8);
+  }
+  .platform-tile-neutral {
+    color: rgb(var(--color-primary));
+    border-color: rgb(var(--color-primary) / 0.32);
+    background-color: rgb(var(--color-primary) / 0.12);
+  }
+
+  /**
+   * Chrome surface utility (kept for compatibility).
+   *
+   * Reads its fill, border, blur, and saturation from theme tokens.
+   * Every theme sets --glass-blur to 0px and --glass-saturate to
+   * 100%, and --glass-bg to a flat ink value, so this renders as an
+   * opaque panel with a hairline border — no frosted glass.
+   */
+  .glass-surface {
+    background-color: var(--glass-bg);
+    -webkit-backdrop-filter: blur(var(--glass-blur))
+      saturate(var(--glass-saturate));
+    backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+    border-color: var(--glass-border);
+  }
+
+  /**
+   * Ambient background glow utility — neutralized.
+   *
+   * The class is retained so no component has to change markup or
+   * class names, but the "telemetry printout" direction has no
+   * ambient light: the element renders nothing at all. A page can
+   * keep the wrapper in place and still never paint a blob.
+   */
+  .ambient-glow {
+    display: none;
+  }
+
+  .ambient-glow-primary {
+    background: var(--ambient-glow-primary, transparent);
+  }
+
+  .ambient-glow-secondary {
+    background: var(--ambient-glow-secondary, transparent);
+  }
+
+  /**
+   * Specular highlight utility — neutralized.
+   *
+   * The pseudo-element survives (components rely on the class for
+   * stacking) but paints transparent, so no top-edge light catch,
+   * gradient, or highlight can appear on any surface.
+   */
+  .surface-specular {
+    position: relative;
+    isolation: isolate;
+  }
+
+  .surface-specular::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: transparent;
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  /**
+   * Tactile press utility — a premium spring press for tappable rows
+   * and cards: dips fast on press-down, releases with a soft
+   * overshoot spring. Transform-only, so it stays theme-agnostic
+   * and never fights background/hover treatments. Respects
+   * reduced-motion preferences.
+   */
+  .tactile-press {
+    transition:
+      transform 260ms cubic-bezier(0.22, 1.2, 0.36, 1),
+      background-color 120ms ease;
+  }
+
+  .tactile-press:active {
+    transform: scale(0.98);
+    transition:
+      transform 110ms ease-out,
+      background-color 100ms ease;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .tactile-press,
+    .tactile-press:active {
+      transform: none;
+      transition: background-color 100ms ease;
+    }
+  }
+
+  /**
+   * Eyebrow label — uppercase monospace kicker with a solid dot
+   * marker. Signature device for section labels ("BACKEND & FULL-
+   * STACK ENGINEER" style copy): a small primary-colored tick,
+   * wide letter-spacing, mono type for a distinctly "data" register.
+   * No glow: the marker is a flat printed bullet.
+   */
+  .eyebrow-mono {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-family: var(--font-family-mono);
+    font-size: var(--typography-label-small-font-size, 0.75rem);
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: rgb(var(--color-primary) / 1);
+  }
+
+  .eyebrow-mono::before {
+    content: '';
+    display: inline-block;
+    width: 0.4rem;
+    height: 0.4rem;
+    border-radius: 9999px;
+    background: rgb(var(--color-primary) / 1);
+    flex-shrink: 0;
+  }
+
+  /**
+   * Rule label — hairline section marker used by later layout steps.
+   *
+   * Small uppercase monospace label followed by a rule that fills the
+   * remaining width, the way a technical printout separates fields.
+   * Flat by construction: one 1px line, no gradient or fade.
+   */
+  .rule-label {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    font-family: var(--font-family-mono);
+    font-size: 0.6875rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: rgb(var(--color-on-surface-variant));
+  }
+
+  .rule-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: rgb(var(--color-outline-variant));
+  }
+
+  /**
+   * Glow ring — reads --shadow-avatar-glow, which every theme sets to
+   * `none` in the printout finish. Class retained for compatibility;
+   * renders nothing.
+   */
+  .glow-ring {
+    box-shadow: var(--shadow-avatar-glow);
+  }
+
+  /**
+   * Avatar ring — circular frame around avatars. --shadow-avatar-glow
+   * is `none` in every theme, so this is a plain circular clip with no
+   * bloom; kept as a class so existing markup keeps its shape.
+   */
+  .avatar-glow {
+    border-radius: 9999px;
+    box-shadow: var(--shadow-avatar-glow);
+  }
+
+  /**
+   * Accent text — flat primary ink.
+   *
+   * Previously a background-clip gradient; the printout direction
+   * has no text gradients, so this is a plain solid color swap.
+   * Never used for body copy or anywhere legibility is critical.
+   */
+  .text-gradient-accent {
+    color: rgb(var(--color-primary));
+  }
+
+  /**
+   * Explicit scrollbar class - for backward compatibility.
+   * Global base styles already apply to all non-html elements,
+   * so this class is only needed when a parent has reset to default.
+   */
+  .scrollbar::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  .scrollbar::-webkit-scrollbar-track {
+    background: rgb(var(--color-surface) / 0.5);
+    border-radius: 4px;
+  }
+
+  .scrollbar::-webkit-scrollbar-thumb {
+    background: rgb(var(--color-outline-variant) / 0.5);
+    border-radius: 4px;
+  }
+
+  .scrollbar::-webkit-scrollbar-thumb:hover {
+    background: rgb(var(--color-outline) / 0.7);
+  }
+
+  /**
+   * Reset scrollbar to browser default.
+   * Use when an element needs the native OS scrollbar —
+   * for example, when embedding third-party widgets that
+   * rely on the default scrollbar width for layout calculations.
+   */
+  .scrollbar-default {
+    scrollbar-width: auto;
+    scrollbar-color: auto;
+  }
+
+  .scrollbar-default::-webkit-scrollbar {
+    width: auto;
+    height: auto;
+  }
+
+  .scrollbar-default::-webkit-scrollbar-track {
+    background: initial;
+    border-radius: initial;
+  }
+
+  .scrollbar-default::-webkit-scrollbar-thumb {
+    background: initial;
+    border-radius: initial;
+  }
+
+  .scrollbar-default::-webkit-scrollbar-thumb:hover {
+    background: initial;
+  }
+
+  /**
+   * Hide scrollbar while preserving scroll functionality.
+   * Use for custom scroll containers where scroll position is
+   * communicated through other UI (dots, arrows, progress bars).
+   */
+  .scrollbar-hidden {
+    scrollbar-width: none;
+    /* Firefox */
+    -ms-overflow-style: none;
+    /* IE/Edge */
+  }
+
+  .scrollbar-hidden::-webkit-scrollbar {
+    display: none;
+    /* Chrome/Safari/WebKit */
+  }
+}

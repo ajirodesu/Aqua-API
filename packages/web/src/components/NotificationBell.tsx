@@ -17,7 +17,6 @@ export function NotificationBell() {
   const { config } = useAppData();
   const notifications = config?.notification ?? [];
   const [open, setOpen] = useState(false);
-  const [mounted, setMounted] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -28,15 +27,6 @@ export function NotificationBell() {
     return () => document.removeEventListener('mousedown', onClick);
   }, []);
 
-  useEffect(() => {
-    if (open) {
-      setMounted(true);
-    } else if (mounted) {
-      const t = setTimeout(() => setMounted(false), 150);
-      return () => clearTimeout(t);
-    }
-  }, [open, mounted]);
-
   return (
     <div className="relative" ref={ref}>
       <button
@@ -44,52 +34,44 @@ export function NotificationBell() {
         onClick={() => setOpen((o) => !o)}
         aria-label="Notifications"
         aria-expanded={open}
-        className="relative flex h-9 w-9 items-center justify-center rounded-lg text-on-surface-variant transition-colors duration-fast hover:bg-surface-container-high hover:text-on-surface"
+        className="relative flex h-9 w-9 items-center justify-center rounded-[var(--radius-compact)] text-on-surface-variant transition-colors duration-fast hover:bg-on-surface/[0.08] hover:text-on-surface"
       >
-        <Bell className="h-5 w-5" strokeWidth={2} />
+        <Bell className="h-[18px] w-[18px]" strokeWidth={1.75} />
         {notifications.length > 0 && (
-          <span className="absolute right-2 top-2 flex h-1.5 w-1.5">
-            <span className="absolute inline-flex h-full w-full animate-ping-soft rounded-full bg-primary" />
-            <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-primary" />
-          </span>
+          <span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-[1px] bg-primary" aria-hidden="true" />
         )}
       </button>
 
-      {mounted && (
-        <div
-          className={`absolute right-0 top-11 z-dropdown w-[calc(100vw-1.5rem)] max-w-80 origin-top-right rounded-input border border-hairline bg-surface-container-low p-2 shadow-elevation-3 transition-all duration-fast ease-standard ${
-            open ? 'scale-100 opacity-100' : 'pointer-events-none scale-95 opacity-0'
-          }`}
-        >
-          <div className="flex items-center justify-between px-2 py-1.5">
-            <span className="text-sm font-semibold text-on-surface">Notifications</span>
-            <span className="text-xs text-on-surface-variant">
-              {notifications.length > 0 ? `${notifications.length} total` : 'all caught up'}
+      {open && (
+        <div className="absolute right-0 top-11 z-dropdown w-[calc(100vw-1.5rem)] max-w-80 overflow-hidden rounded-input border border-outline-variant bg-surface-container-low [animation:fade-in-down_150ms_var(--easing-standard-decelerate)_both]">
+          <div className="flex items-center justify-between border-b border-hairline px-3.5 py-3">
+            <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-on-surface">Notifications</span>
+            <span className="font-mono text-[10px] uppercase tracking-[0.06em] text-on-surface-variant">
+              {notifications.length > 0 ? `${notifications.length} total` : 'clear'}
             </span>
           </div>
-          <div className="max-h-72 space-y-1 overflow-y-auto px-1 pb-1">
+          <div className="max-h-72 overflow-y-auto">
             {notifications.length === 0 ? (
               <div className="flex flex-col items-center gap-2 px-4 py-8 text-center">
-                <span className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-on-surface/10">
-                  <BellOff className="h-5 w-5 text-surface-variant" />
+                <span className="flex h-9 w-9 items-center justify-center border border-hairline bg-surface-container-high">
+                  <BellOff className="h-4 w-4 text-on-surface-variant" strokeWidth={1.75} />
                 </span>
-                <span className="text-xs text-on-surface-variant">No notifications yet.</span>
+                <span className="font-mono text-[10px] uppercase tracking-[0.08em] text-on-surface-variant">No notifications yet.</span>
               </div>
             ) : (
               [...notifications]
                 .sort((a, b) => b.createdAt - a.createdAt)
                 .map((n) => (
-                  <div
-                    key={n.id}
-                    className="tactile-press rounded-input px-3 py-2.5 transition-colors duration-fast hover:bg-surface-container-high"
-                  >
+                  <div key={n.id} className="border-b border-hairline px-3.5 py-3 transition-colors duration-fast last:border-b-0 hover:bg-surface-container-high">
                     <div className="flex items-center justify-between gap-2">
-                      <span className="min-w-0 truncate text-[13px] font-semibold text-on-surface">
+                      <span className="min-w-0 truncate font-brand text-[15px] uppercase tracking-[0.06em] text-on-surface">
                         {n.title || 'Update'}
                       </span>
-                      <span className="shrink-0 text-[11px] text-on-surface-variant">{timeAgo(n.createdAt)}</span>
+                      <span className="shrink-0 font-mono text-[10px] uppercase tracking-[0.04em] text-on-surface-variant">
+                        {timeAgo(n.createdAt)}
+                      </span>
                     </div>
-                    <p className="mt-0.5 text-[13px] leading-snug text-on-surface-variant">{n.message}</p>
+                    <p className="mt-1 text-body-sm leading-snug text-on-surface-variant">{n.message}</p>
                   </div>
                 ))
             )}

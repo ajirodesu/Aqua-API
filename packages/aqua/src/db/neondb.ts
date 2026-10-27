@@ -9,7 +9,7 @@
  */
 
 import pg from 'pg';
-import type { AquaDb, DbAdmin, DbNotification } from './index.js';
+import type { AquaDb, DbAdmin, DbEndpointHit, DbNotification } from './index.js';
 import { decryptSetting, encryptSetting } from '../engine/crypto.js';
 
 const { Pool } = pg;
@@ -56,6 +56,11 @@ const SCHEMA = `
     username TEXT NOT NULL UNIQUE,
     password_hash TEXT NOT NULL,
     created_at BIGINT NOT NULL
+  );
+  CREATE TABLE IF NOT EXISTS aqua_endpoint_hits (
+    path TEXT PRIMARY KEY,
+    hits BIGINT NOT NULL DEFAULT 0,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
   );
 `;
 
@@ -167,6 +172,23 @@ export function createNeonDb(): AquaDb {
         'INSERT INTO aqua_admins (id, username, password_hash, created_at) VALUES ($1, $2, $3, $4)',
         [admin.id, admin.username, admin.passwordHash, admin.createdAt]
       );
+    },
+    async recordEndpointHit(path: string): Promise<void> {
+      await ready;
+      await pool.query(
+        `INSERT INTO aqua_endpoint_hits (path, hits, updated_at) VALUES ($1, 1, NOW())
+         ON CONFLICT (path) DO UPDATE SET hits = aqua_endpoint_hits.hits + 1, updated_at = NOW()`,
+        [path]
+      );
+    },
+    async getTopEndpoints(limit: number): Promise<DbEndpointHit[]> {
+      await ready;
+      const safeLimit = Math.max(1, Math.min(Math.floor(limit) || 5, 50));
+      const res = await pool.query<{ path: string; hits: string }>(
+        'SELECT path, hits::text AS hits FROM aqua_endpoint_hits ORDER BY hits DESC, path ASC LIMIT $1',
+        [safeLimit]
+      );
+      return res.rows.map((r) => ({ path: r.path, count: Number(r.hits) }));
     },
     async ping(): Promise<{ ok: boolean; latencyMs: number }> {
       const start = Date.now();

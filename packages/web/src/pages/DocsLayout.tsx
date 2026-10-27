@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, Outlet, useLocation } from 'react-router-dom';
-import { BookOpen, Github, Send } from 'lucide-react';
+import { Github, Send } from 'lucide-react';
 import { Sidebar } from '../components/Sidebar';
 import { TopBar } from '../components/TopBar';
 import { PageLoader } from '../components/PageLoader';
 import { useAppData, slugify } from '../lib/appData';
+import { H_BRAND_TEXT, H_SHELL_SCOPE, H_STATUS_SQUARE } from '../lib/shell';
+import { cn } from '../lib/cn';
 
 const COLLAPSED_STORAGE_KEY = 'aqua-sidebar:collapsed:v1';
 const COLLAPSED_SIDEBAR_W = 'w-[4.75rem]';
@@ -17,7 +19,7 @@ export function DocsLayout() {
   const mainRef = useRef<HTMLElement>(null);
   const year = new Date().getFullYear();
 
-  // Desktop only: collapse the sidebar to a YouTube-style icon rail.
+  // Desktop only: collapse the sidebar to a printed icon rail.
   // Persisted across refreshes.
   const [collapsed, setCollapsed] = useState(() => {
     try {
@@ -66,26 +68,27 @@ export function DocsLayout() {
     };
   }, [mobileOpen]);
 
-  const popularEndpoints = buckets
-    .flatMap((b) => b.items.map((i) => ({ ...i, bucketName: b.name })))
-    .slice(0, 5);
+  const name = config?.name ?? 'Aqua APIs';
+  const status = config?.header.status ?? 'Online';
+  const linkCategories = buckets.slice(0, 3);
 
   return (
     <div className="flex min-h-[100dvh] flex-col bg-surface text-on-surface lg:h-[100dvh] lg:flex-row lg:overflow-hidden">
-      {/* Desktop sidebar — permanent, collapses to a YouTube-style icon rail,
-          hidden entirely below md (mobile uses the off-canvas drawer) */}
+      {/* Desktop rail — permanent ledger, collapses to an icon rail, hidden
+          below md where the off-canvas drawer takes over. */}
       <aside
-        className={`glass-surface hidden shrink-0 flex-col border-r border-hairline md:flex sticky top-0 h-screen overflow-y-hidden transition-[width] duration-normal ${
+        className={cn(
+          'sticky top-0 hidden h-screen shrink-0 flex-col overflow-y-hidden border-r border-hairline bg-surface-container-low transition-[width] duration-normal md:flex',
           collapsed ? COLLAPSED_SIDEBAR_W : 'w-[var(--layout-sidebar-w)]'
-        }`}
+        )}
       >
         <Sidebar collapsed={collapsed} onToggleCollapsed={toggleCollapsed} />
       </aside>
 
-      {/* Mobile scrim */}
+      {/* Mobile scrim — flat ink, no blur */}
       {mobileOpen && (
         <div
-          className="fixed inset-0 z-drawer bg-scrim/50 md:hidden [backdrop-filter:var(--surface-blur-sm)]"
+          className="fixed inset-0 z-drawer bg-scrim/60 md:hidden"
           onClick={() => setMobileOpen(false)}
           aria-hidden="true"
         />
@@ -93,124 +96,130 @@ export function DocsLayout() {
 
       {/* Mobile off-canvas drawer */}
       <aside
-        className={`glass-surface fixed inset-y-0 left-0 z-modal flex w-[85%] max-w-xs flex-col border-r border-hairline transition-transform duration-normal ease-standard md:hidden ${
-          mobileOpen ? 'translate-x-0 shadow-elevation-4' : '-translate-x-full'
-        }`}
+        className={cn(
+          'fixed inset-y-0 left-0 z-modal flex w-[var(--layout-sidebar-w)] flex-col border-r border-hairline bg-surface-container-low transition-transform duration-normal md:hidden',
+          mobileOpen ? 'translate-x-0' : '-translate-x-full'
+        )}
         aria-label="API navigation"
         aria-modal={mobileOpen}
+        aria-hidden={!mobileOpen}
       >
         <Sidebar onNavigate={() => setMobileOpen(false)} />
       </aside>
 
       {/* Main content column */}
-      <div className="flex min-w-0 flex-1 flex-col lg:overflow-hidden">
-        <TopBar onMenuClick={() => setMobileOpen((p) => !p)} />
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+        <TopBar onMenuClick={() => setMobileOpen((p) => !p)} menuOpen={mobileOpen} />
 
-        <main ref={mainRef} className="flex-1 lg:overflow-y-auto lg:overscroll-contain">
+        <main ref={mainRef} className="min-h-0 flex-1 lg:overflow-y-auto lg:overscroll-contain">
           {loading ? (
             <div className="flex min-h-[60dvh] items-center justify-center lg:h-full lg:min-h-0">
               <PageLoader label="Loading endpoints…" />
             </div>
           ) : error ? (
-            <div className="flex min-h-[60dvh] items-center justify-center px-6 text-center lg:h-full lg:min-h-0">
-              <div className="flex max-w-sm flex-col gap-3 rounded-card border border-error/30 bg-error/10 px-4 py-3 text-left">
-                <p className="text-sm font-semibold text-error">Error loading bots</p>
-                <p className="text-sm text-on-surface-variant">Couldn&apos;t load the API catalog: {error}</p>
+            <div className="mx-auto flex min-h-[60dvh] w-full max-w-[var(--layout-content-max)] items-center justify-center px-[var(--layout-main-p)] lg:h-full lg:min-h-0">
+              <div className="w-full max-w-sm border border-error/30 bg-error-container/40 px-4 py-4">
+                <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-error">ERROR / CATALOG</p>
+                <p className="mt-2 font-brand text-headline-sm uppercase text-on-surface">Could not load the API catalog</p>
+                <p className="mt-1 text-body-sm text-on-surface-variant">{error}</p>
               </div>
             </div>
           ) : (
-            <div className="mx-auto w-full max-w-7xl p-4 md:p-6">
+            <div className="mx-auto w-full max-w-[var(--layout-content-max)] px-[var(--layout-main-p)] py-6 md:py-8">
               <Outlet />
             </div>
           )}
 
-          {/* Footer — part of the scrolling content, never sticky: it sits at
-              the end of the page and scrolls away like any other section. */}
-          <footer className="border-t border-hairline bg-surface-container-low">
-            <div className="mx-auto w-full max-w-7xl px-5 py-10 md:px-6">
-              <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr]">
-                <div>
-                  <p className="text-[15px] font-semibold tracking-tight text-on-surface">
-                    {config?.name ?? 'Aqua APIs'}
+          {/* Colophon — end of the document, scrolls with the page. */}
+          <footer className="border-t border-hairline">
+            <div className="mx-auto w-full max-w-[var(--layout-content-max)] px-[var(--layout-main-p)] py-10">
+              <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-[1.6fr_1fr_1fr]">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <img src="/icon.png" alt="" className="h-4 w-4 rounded-[2px] object-contain opacity-80" />
+                    <span className={cn(H_BRAND_TEXT, 'text-on-surface')}>AQUA</span>
+                  </div>
+                  <p className="mt-3 max-w-xs text-body-sm text-on-surface-variant">
+                    {config?.description ?? 'An interactive API platform for endpoint exploration and real-time testing.'}
                   </p>
-                  <p className="mt-1.5 max-w-xs text-[13px] leading-relaxed text-on-surface-variant">
-                    {config?.description ?? 'A fast, friendly REST API playground.'}
-                  </p>
-                  <p className="mt-3 inline-flex items-center gap-1.5 text-xs font-medium text-success">
-                    <span className="relative flex h-1.5 w-1.5">
-                      <span className="absolute inline-flex h-full w-full animate-ping-soft rounded-full bg-success" />
-                      <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-success" />
-                    </span>
-                    {config?.header.status ?? 'Online'} • {totalEndpoints} endpoints
+                  <p className="mt-3 flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.1em] text-on-surface-variant/85">
+                    <span className={cn(H_STATUS_SQUARE, 'bg-success')} aria-hidden="true" />
+                    {status} · {totalEndpoints} endpoints
                   </p>
                 </div>
 
-                <nav aria-label="Documentation">
-                  <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-surface-variant">
-                    Documentation
-                  </p>
-                  <ul className="mt-3 space-y-1">
+                <div>
+                  <h2 className="rule-label">REFERENCE</h2>
+                  <ul className="mt-3 space-y-1.5 font-mono text-[11px] uppercase tracking-[0.06em] text-on-surface-variant">
                     <li>
-                      <Link
-                        to="/docs"
-                        className="tactile-press flex h-9 items-center gap-2.5 rounded-input px-2 text-[13px] text-on-surface-variant transition-colors duration-fast hover:bg-surface-container-high hover:text-on-surface"
-                      >
-                        <BookOpen className="h-4 w-4 shrink-0 text-primary" strokeWidth={2} />
+                      <Link to="/docs" className="transition-colors hover:text-on-surface">
                         Overview
                       </Link>
                     </li>
-                    {popularEndpoints.map((e) => (
-                      <li key={e.path}>
-                        <Link
-                          to={`/docs/${slugify(e.bucketName)}/${slugify(e.name)}`}
-                          className="tactile-press flex h-9 items-center gap-2.5 rounded-input px-2 text-[13px] text-on-surface-variant transition-colors duration-fast hover:bg-surface-container-high hover:text-on-surface"
-                        >
-                          <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-surface-variant" />
-                          <span className="truncate">{e.name}</span>
-                        </Link>
-                      </li>
-                    ))}
+                    {linkCategories.map((bucket) => {
+                      const first = bucket.items[0];
+                      return (
+                        <li key={bucket.name}>
+                          <Link
+                            to={first ? `/docs/${slugify(bucket.name)}/${slugify(first.name)}` : '/docs'}
+                            className="transition-colors hover:text-on-surface"
+                          >
+                            {bucket.name}
+                          </Link>
+                        </li>
+                      );
+                    })}
+                    <li>
+                      <Link to="/admin" className="transition-colors hover:text-on-surface">
+                        Admin console
+                      </Link>
+                    </li>
                   </ul>
-                </nav>
+                </div>
 
                 <div>
-                  <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-surface-variant">
-                    Connect
-                  </p>
-                  <div className="mt-3 space-y-1">
+                  <h2 className="rule-label">CONNECT</h2>
+                  <ul className="mt-3 space-y-1.5 font-mono text-[11px] uppercase tracking-[0.06em] text-on-surface-variant">
                     {config?.telegram && (
-                      <a
-                        href={config.telegram}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="tactile-press flex h-9 items-center gap-2.5 rounded-input px-2 text-[13px] text-on-surface-variant transition-colors duration-fast hover:bg-surface-container-high hover:text-on-surface"
-                      >
-                        <Send className="h-4 w-4 shrink-0 text-primary" strokeWidth={2} />
-                        Telegram
-                      </a>
+                      <li>
+                        <a
+                          href={config.telegram}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-2 transition-colors hover:text-on-surface"
+                        >
+                          <Send className="h-3 w-3" strokeWidth={1.75} />
+                          Telegram
+                        </a>
+                      </li>
                     )}
                     {config?.github && (
-                      <a
-                        href={config.github}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="tactile-press flex h-9 items-center gap-2.5 rounded-input px-2 text-[13px] text-on-surface-variant transition-colors duration-fast hover:bg-surface-container-high hover:text-on-surface"
-                      >
-                        <Github className="h-4 w-4 shrink-0 text-primary" strokeWidth={2} />
-                        GitHub
-                      </a>
+                      <li>
+                        <a
+                          href={config.github}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-2 transition-colors hover:text-on-surface"
+                        >
+                          <Github className="h-3 w-3" strokeWidth={1.75} />
+                          GitHub
+                        </a>
+                      </li>
                     )}
-                  </div>
+                    <li>
+                      <Link to="/docs/tools/ipcheck" className="transition-colors hover:text-on-surface">
+                        IP checker
+                      </Link>
+                    </li>
+                  </ul>
                 </div>
               </div>
 
-              <div className="mt-8 flex flex-col items-center justify-between gap-2 border-t border-outline-variant pt-6 sm:flex-row">
-                <p className="text-xs text-surface-variant">
-                  © {year} {config?.name ?? 'API'}. All rights reserved.
-                </p>
-                <p className="font-mono text-[11px] text-surface-variant">
-                  Built by {config?.operator ?? 'AjiroDesu'}
-                </p>
+              <div className="mt-10 flex items-center justify-between gap-3 border-t border-hairline pt-4">
+                <span className={H_SHELL_SCOPE}>© {year} {name}</span>
+                <span className={cn(H_SHELL_SCOPE, 'text-right')}>
+                  BUILT BY {config?.operator ?? 'AjiroDesu'}
+                </span>
               </div>
             </div>
           </footer>

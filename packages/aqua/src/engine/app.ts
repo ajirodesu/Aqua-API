@@ -227,6 +227,12 @@ async function loadEndpointsFromDirectory(
               }
               req.isEndpoint = true;
               await handler({ req, res, app, config, meta, logger });
+              // Persistent usage counter for the docs "Top 5" section.
+              // Fire-and-forget: a counter failure must never break a response.
+              // Only successful calls count (handler errors go to next() above).
+              db.recordEndpointHit(route).catch((err: unknown) => {
+                logger.warn(`[db] recordEndpointHit failed for ${route}: ${(err as Error).message}`);
+              });
             } catch (err) {
               next(err);
             }
@@ -280,6 +286,18 @@ app.get('/api/endpoints', (_req, res) => {
     count: visible.reduce((total, cat) => total + cat.items.length, 0),
     endpoints: visible,
   });
+});
+
+app.get('/api/top-endpoints', async (req, res) => {
+  // Most-called routes from the persistent DB counters — powers the docs
+  // "Top 5" section. Disabled endpoints are excluded like everywhere else.
+  const raw = Array.isArray(req.query.limit) ? req.query.limit[0] : req.query.limit;
+  const limit = Math.max(1, Math.min(Number.parseInt(String(raw ?? '5'), 10) || 5, 50));
+  const rows = await db.getTopEndpoints(limit + 10);
+  const top = rows
+    .filter((h) => !adminStore.isEndpointDisabled(h.path))
+    .slice(0, limit);
+  res.json({ status: true, top });
 });
 
 app.get('/api/config', async (_req, res) => {

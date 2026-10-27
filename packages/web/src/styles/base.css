@@ -1,0 +1,199 @@
+/* ============================================================
+   BASE LAYER
+
+   HTML element defaults, body/root configuration, and scrollbar
+   normalization. Dark is the sole supported theme.
+
+   Type roles: Barlow Condensed for h1–h3 (signage), Barlow for
+   h4–h6 and all reading/UI text, JetBrains Mono for code and
+   tabular figures. Rules are flat: ink, hairline, no shadow.
+   ============================================================ */
+
+@layer base {
+  :root {
+    font-family: var(--font-family-plain);
+    font-weight: 400;
+    line-height: 1.6;
+    letter-spacing: 0em;
+    color-scheme: dark;
+    /* Barlow ships as static weights (no optical-size axis) — keep
+       automatic optical sizing on so any future variable face still
+       picks the correct cut per rendered size. */
+    font-optical-sizing: auto;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    font-size: 100%;
+  }
+
+  html,
+  body {
+    margin: 0;
+    padding: 0;
+    color: rgb(var(--color-on-surface) / 1);
+    background-color: rgb(var(--color-surface) / 1);
+  }
+
+  /* -----------------------------------------------------------
+    Global Custom Scrollbar Styles
+
+    Scrollbars stay faint at rest (--scrollbar-idle-opacity, 0.35
+    in every theme) and go solid only during active scroll
+    interaction. ThemeProvider toggles html[data-scrolling="true"]
+    while the user is scrolling, so this behavior is identical
+    across Emerald, Jasper, and Amethyst.
+    ----------------------------------------------------------- */
+  *:not(html) {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(var(--color-outline-variant) / 0.6) transparent;
+  }
+
+  *:not(html)::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  *:not(html)::-webkit-scrollbar-track {
+    background: transparent;
+    border-radius: 3px;
+  }
+
+  *:not(html)::-webkit-scrollbar-thumb {
+    background: rgb(var(--color-outline-variant) / 0.6);
+    border-radius: 3px;
+    opacity: var(--scrollbar-idle-opacity, 1);
+    transition: opacity var(--duration-normal) var(--easing-standard);
+  }
+
+  html[data-scrolling='true'] *:not(html)::-webkit-scrollbar-thumb {
+    opacity: 1;
+  }
+
+  *:not(html):hover::-webkit-scrollbar-thumb {
+    opacity: 1;
+  }
+
+  *:not(html)::-webkit-scrollbar-thumb:hover {
+    background: rgb(var(--color-outline) / 0.8);
+  }
+
+  /* h1–h3 are signage: condensed display face, tight leading. */
+  h1 {
+    font-family: var(--font-family-display);
+    font-size: var(--typography-display-large-font-size);
+    line-height: var(--typography-display-large-line-height);
+    font-weight: var(--typography-display-large-font-weight);
+    letter-spacing: var(--typography-display-large-letter-spacing);
+  }
+
+  h2 {
+    font-family: var(--font-family-display);
+    font-size: var(--typography-display-medium-font-size);
+    line-height: var(--typography-display-medium-line-height);
+    font-weight: var(--typography-display-medium-font-weight);
+    letter-spacing: var(--typography-display-medium-letter-spacing);
+  }
+
+  h3 {
+    font-family: var(--font-family-display);
+    font-size: var(--typography-headline-large-font-size);
+    line-height: var(--typography-headline-large-line-height);
+    font-weight: var(--typography-headline-large-font-weight);
+    letter-spacing: var(--typography-headline-large-letter-spacing);
+  }
+
+  /* h4–h6 are in-document headings: reading face, not signage. */
+  h4 {
+    font-family: var(--font-family-plain);
+    font-size: var(--typography-headline-medium-font-size);
+    line-height: var(--typography-headline-medium-line-height);
+    font-weight: var(--typography-headline-medium-font-weight);
+    letter-spacing: var(--typography-headline-medium-letter-spacing);
+  }
+
+  h5 {
+    font-family: var(--font-family-plain);
+    font-size: var(--typography-headline-small-font-size);
+    line-height: var(--typography-headline-small-line-height);
+    font-weight: var(--typography-headline-small-font-weight);
+    letter-spacing: var(--typography-headline-small-letter-spacing);
+  }
+
+  h6 {
+    font-family: var(--font-family-plain);
+    font-size: var(--typography-title-large-font-size);
+    line-height: var(--typography-title-large-line-height);
+    font-weight: var(--typography-title-large-font-weight);
+    letter-spacing: var(--typography-title-large-letter-spacing);
+  }
+
+  p {
+    font-size: var(--typography-body-medium-font-size);
+    line-height: var(--typography-body-medium-line-height);
+  }
+
+  nav a:hover {
+    text-decoration: none;
+  }
+
+  code {
+    font-family: var(--font-family-mono);
+    font-size: 0.875em;
+    font-variant-numeric: tabular-nums;
+    background-color: rgb(var(--color-surface-container-highest) / 1);
+    color: rgb(var(--color-primary) / 0.9);
+    padding: 0.15rem 0.35rem;
+    border-radius: var(--radius-compact);
+    letter-spacing: 0;
+    border: 1px solid rgb(var(--color-outline-variant) / 0.5);
+  }
+
+  pre {
+    font-family: var(--font-family-mono);
+    font-size: var(--typography-body-small-font-size);
+    line-height: 1.6;
+    font-variant-numeric: tabular-nums;
+    background-color: rgb(var(--color-surface-container-highest) / 1);
+    padding: var(--spacing-4);
+    border-radius: var(--radius-card);
+    overflow-x: auto;
+    border: 1px solid rgb(var(--color-outline-variant) / 0.5);
+  }
+
+  pre code {
+    background-color: transparent;
+    padding: 0;
+    font-size: inherit;
+    border: none;
+  }
+
+  /* Numerals line up in data contexts only — never forced on prose. */
+  .font-mono {
+    font-variant-numeric: tabular-nums;
+  }
+
+  ::selection {
+    background: rgb(var(--color-primary));
+    color: rgb(var(--color-on-primary));
+  }
+
+  :focus-visible {
+    outline: 2px solid rgb(var(--color-primary));
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}

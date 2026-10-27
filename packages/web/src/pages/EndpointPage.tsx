@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { ChevronLeft, Copy, Play } from 'lucide-react';
+import { Copy, Play } from 'lucide-react';
 import { useAppData } from '../lib/appData';
 import { MethodBadge } from '../components/MethodBadge';
 import { ParamField } from '../components/ParamField';
 import { ResponseConsole } from '../components/ResponseConsole';
 import { CodeExample } from '../components/CodeExample';
 import { API_ORIGIN, executeEndpoint, type ExecuteResult } from '../lib/api';
+import { H_SHELL_SCOPE, H_STATUS_SQUARE } from '../lib/shell';
+import { cn } from '../lib/cn';
 
 export function EndpointPage() {
   const { category = '', name = '' } = useParams();
@@ -38,14 +40,15 @@ export function EndpointPage() {
 
   if (!endpoint) {
     return (
-      <div className="flex min-h-[60vh] animate-fade-in-up flex-col items-center justify-center gap-2 rounded-card border border-hairline bg-surface-container px-6 py-16 text-center">
-        <div className="mx-auto max-w-sm">
-          <p className="text-lg font-semibold text-on-surface">Endpoint not found</p>
-          <p className="mt-1 text-sm text-on-surface-variant">It may have been renamed or removed.</p>
-          <Link to="/docs" className="btn-primary mt-6 inline-flex h-11 rounded-lg">
-            Back to overview
-          </Link>
-        </div>
+      <div className="flex min-h-[50vh] animate-fade-in-up flex-col justify-center">
+        <div className="rule-label max-w-[14rem]">404 / ROUTE</div>
+        <h1 className="mt-6 font-brand text-display-sm uppercase text-on-surface">Endpoint not found</h1>
+        <p className="mt-3 max-w-md text-body-md text-on-surface-variant">
+          It may have been renamed or removed from the catalog.
+        </p>
+        <Link to="/docs" className="btn-primary mt-6 self-start">
+          Back to overview
+        </Link>
       </div>
     );
   }
@@ -90,48 +93,97 @@ export function EndpointPage() {
   }
 
   return (
-    <div className="flex animate-fade-in-up flex-col gap-6 pb-16">
-      <Link
-        to="/docs"
-        className="inline-flex items-center gap-1 text-[13px] font-medium text-on-surface-variant transition-colors hover:text-on-surface"
-      >
-        <ChevronLeft className="h-3.5 w-3.5" />
-        Back to Dashboard
-      </Link>
+    <div className="flex animate-fade-in-up flex-col pb-4">
+      {/* Breadcrumb — mono scope chain */}
+      <nav aria-label="Breadcrumb" className="flex flex-wrap items-center gap-2 border-b border-hairline pb-3">
+        <Link
+          to="/docs"
+          className="font-mono text-[10px] uppercase tracking-[0.16em] text-on-surface-variant transition-colors duration-fast hover:text-on-surface"
+        >
+          DOCS
+        </Link>
+        <span aria-hidden="true" className="text-on-surface-variant/50">/</span>
+        <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-on-surface-variant">
+          {endpoint.category}
+        </span>
+        <span aria-hidden="true" className="text-on-surface-variant/50">/</span>
+        <span className="min-w-0 truncate font-mono text-[10px] uppercase tracking-[0.16em] text-on-surface">
+          {endpoint.name}
+        </span>
+      </nav>
 
-      <div className="flex flex-col gap-1.5">
-        <div className="flex items-center gap-2">
+      {/* Header — route identity */}
+      <header className="border-b border-hairline py-6">
+        <div className="flex flex-wrap items-center gap-2.5">
           <MethodBadge method={method} size="md" />
-          <span className="text-xs font-medium capitalize text-on-surface-variant">{endpoint.category}</span>
+          <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-on-surface-variant">
+            {endpoint.category}
+          </span>
+          <span className="font-mono text-[10px] text-on-surface-variant/50">/</span>
+          <span className="font-mono text-[10px] tracking-[0.02em] text-on-surface-variant">
+            {endpoint.path.split('?')[0]}
+          </span>
         </div>
-        <h1 className="text-[22px] font-bold capitalize tracking-tight text-on-surface sm:text-2xl">
+
+        <h1 className="mt-4 break-words font-brand text-display-sm uppercase capitalize text-on-surface">
           {endpoint.name}
         </h1>
-        <p className="max-w-2xl text-[13px] leading-normal text-on-surface-variant">{endpoint.desc}</p>
+        <p className="mt-3 max-w-2xl text-body-md text-on-surface-variant">{endpoint.desc}</p>
+      </header>
+
+      {/* Public route field */}
+      <div className="border-b border-hairline py-5">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-on-surface-variant/80">
+            PUBLIC ROUTE
+          </span>
+          <span className={H_SHELL_SCOPE}>
+            {method} · {params.length} {params.length === 1 ? 'PARAM' : 'PARAMS'}
+          </span>
+        </div>
+        <div className="mt-2 flex items-stretch border border-[var(--color-input-border)] bg-[var(--color-input-bg)]">
+          <code className="min-w-0 flex-1 overflow-x-auto whitespace-nowrap px-3 py-2.5 font-mono text-[12px] text-on-surface">
+            {publicUrl}
+          </code>
+          <button
+            type="button"
+            onClick={copyUrl}
+            className="flex shrink-0 items-center gap-1.5 border-l border-hairline px-3 font-mono text-[10px] uppercase tracking-[0.06em] text-on-surface-variant transition-colors duration-fast hover:bg-on-surface/[0.08] hover:text-on-surface focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary"
+            aria-label="Copy endpoint URL"
+          >
+            <Copy className="h-3.5 w-3.5" strokeWidth={1.75} />
+            {urlCopied ? 'Copied' : 'Copy'}
+          </button>
+        </div>
       </div>
 
-      <div className="flex items-center gap-2 rounded-xl border border-hairline bg-surface-container-low p-3">
-        <code className="flex-1 overflow-x-auto whitespace-nowrap border-0 bg-transparent p-0 font-mono text-[12.5px] text-on-surface">
-          {publicUrl}
-        </code>
-        <button type="button" onClick={copyUrl} className="btn-secondary h-9 shrink-0 rounded-lg !px-3 !py-1.5 text-xs">
-          <Copy className="h-3.5 w-3.5" />
-          {urlCopied ? 'Copied' : 'Copy'}
-        </button>
-      </div>
+      {/* Request / response — two columns of one document */}
+      <div className="grid gap-8 border-b border-hairline py-8 lg:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] xl:gap-10">
+        <section aria-labelledby="request-title" className="min-w-0">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="rule-label max-w-[12rem]">01 / REQUEST</div>
+            <span className={H_SHELL_SCOPE}>{params.length} FIELDS</span>
+          </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] xl:gap-8">
-        <div className="rounded-xl border border-hairline bg-surface-container-low p-4 md:p-6">
+          <h2 id="request-title" className="mt-3 font-brand text-headline-sm uppercase text-on-surface">
+            Parameters
+          </h2>
+
           {endpoint.methods.length > 1 && (
-            <div className="mb-4 inline-flex gap-1 rounded-input border border-hairline bg-surface-container-low p-1 text-[13px] font-semibold">
+            <div className="mt-4 flex flex-wrap border-b border-hairline" role="tablist" aria-label="HTTP method">
               {endpoint.methods.map((m) => (
                 <button
                   key={m}
                   type="button"
+                  role="tab"
+                  aria-selected={method === m}
                   onClick={() => setMethod(m)}
-                  className={`rounded-[calc(var(--radius-input)-0.25rem)] px-3.5 py-2 transition-colors duration-fast ${
-                    method === m ? 'bg-surface-container-highest text-on-surface shadow-elevation-1' : 'text-on-surface-variant hover:text-on-surface'
-                  }`}
+                  className={cn(
+                    '-mb-px border-b-2 px-4 py-2 font-mono text-[10px] uppercase tracking-[0.1em] transition-colors duration-fast focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary',
+                    method === m
+                      ? 'border-primary text-on-surface'
+                      : 'border-transparent text-on-surface-variant hover:text-on-surface'
+                  )}
                 >
                   {m}
                 </button>
@@ -140,11 +192,13 @@ export function EndpointPage() {
           )}
 
           {params.length === 0 ? (
-            <div className="flex flex-col items-center gap-2 rounded-card bg-surface-container px-3 py-12 text-center">
-              <p className="text-sm text-on-surface-variant">This endpoint has no parameters — just run it.</p>
+            <div className="mt-4 border border-hairline bg-surface-container-low px-3 py-8 text-center">
+              <p className="font-mono text-[10px] uppercase tracking-[0.12em] text-on-surface-variant">
+                No parameters — run the request directly.
+              </p>
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="mt-4 space-y-4">
               {params.map((param) => (
                 <ParamField
                   key={param.name}
@@ -161,29 +215,55 @@ export function EndpointPage() {
             type="button"
             onClick={run}
             disabled={running || missingRequired}
-            className="btn-primary mt-6 h-12 w-full rounded-lg text-[14px]"
+            className="btn-primary mt-6 min-h-12 w-full"
           >
             {running ? (
-              <span className="h-4 w-4 animate-spin rounded-full border-2 border-on-primary/40 border-t-on-primary" />
+              <span className="h-3.5 w-3.5 animate-spin rounded-[1px] border border-on-primary/40 border-t-on-primary" />
             ) : (
-              <Play className="h-3.5 w-3.5 fill-current" />
+              <Play className="h-3 w-3 fill-current" strokeWidth={1.75} />
             )}
             {running ? 'Sending…' : alreadySent ? 'Send request again' : 'Send request'}
           </button>
-        </div>
 
-        <div>
-          <ResponseConsole result={result} />
-        </div>
+          {missingRequired && (
+            <p className="mt-2 flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.08em] text-warning">
+              <span className={cn(H_STATUS_SQUARE, 'bg-warning')} aria-hidden="true" />
+              Complete required fields to send
+            </p>
+          )}
+        </section>
+
+        <section aria-labelledby="response-title" className="min-w-0">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="rule-label max-w-[12rem]">02 / RESPONSE</div>
+            <span className={cn(H_SHELL_SCOPE, result ? (result.ok ? 'text-success' : 'text-error') : '')}>
+              {result ? `${result.status} · ${result.durationMs}MS` : 'STANDBY'}
+            </span>
+          </div>
+
+          <h2 id="response-title" className="mt-3 font-brand text-headline-sm uppercase text-on-surface">
+            Output
+          </h2>
+
+          <div className="mt-4">
+            <ResponseConsole result={result} />
+          </div>
+        </section>
       </div>
 
-      <div>
-        <h2 className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-on-surface-variant">
-          Code example
-          <span className="h-px flex-1 bg-hairline" />
+      {/* Code example */}
+      <section aria-labelledby="code-title" className="py-8">
+        <div className="rule-label max-w-[14rem]">03 / CODE EXAMPLE</div>
+        <h2 id="code-title" className="mt-3 font-brand text-headline-sm uppercase text-on-surface">
+          Copy a snippet
         </h2>
-        <CodeExample url={publicUrl} method={method} values={visibleValuesForSignature} />
-      </div>
+        <p className="mt-2 max-w-[52ch] text-body-sm text-on-surface-variant">
+          Built from the current URL, method, and field values.
+        </p>
+        <div className="mt-4">
+          <CodeExample url={publicUrl} method={method} values={visibleValuesForSignature} />
+        </div>
+      </section>
     </div>
   );
 }
