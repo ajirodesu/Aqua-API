@@ -36,7 +36,7 @@ export interface TopEndpoint {
   count: number;
 }
 
-export function fetchTopEndpoints(limit = 5): Promise<{ status: boolean; top: TopEndpoint[] }> {
+export function fetchTopEndpoints(limit = 5): Promise<{ status: boolean; enabled: boolean; top: TopEndpoint[] }> {
   return getJSON(`/api/top-endpoints?limit=${limit}`);
 }
 

@@ -27,9 +27,7 @@ export async function initialize({ req, res }: EndpointCtx) {
   }
 
   try {
-    const bgUrl = 'https://i.postimg.cc/RhccGgk1/jail.png';
-    const canvasWidth = 400;
-    const canvasHeight = 400;
+    const bgUrl = 'https://i.postimg.cc/DwwJTrRC/jail.png';
 
     // Fetch jail bars template overlay and user avatar in parallel
     const [jailOverlay, avatarImage] = await Promise.all([
@@ -37,7 +35,10 @@ export async function initialize({ req, res }: EndpointCtx) {
       loadRemoteImage(image, 'image'),
     ]);
 
-    // Create a 400x400 canvas
+    // Match the template's natural dimensions
+    const canvasWidth = jailOverlay.width;
+    const canvasHeight = jailOverlay.height;
+
     const canvas = createCanvas(canvasWidth, canvasHeight);
     const ctx = canvas.getContext('2d');
 
@@ -45,7 +46,7 @@ export async function initialize({ req, res }: EndpointCtx) {
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'high';
 
-    // 1. Fill base with solid white background (equivalent to new jimp(400, 400, 0xFFFFFFFF))
+    // 1. Fill base with solid white background (backdrop for transparent avatars)
     ctx.fillStyle = '#FFFFFF';
     ctx.fillRect(0, 0, canvasWidth, canvasHeight);
 
@@ -68,10 +69,10 @@ export async function initialize({ req, res }: EndpointCtx) {
       sy = (imgHeight - sHeight) / 2;
     }
 
-    // 3. Draw user image UNDER the jail bars at (0, 0) with size 400x400
+    // 3. Draw user image UNDER the jail bars, filling the canvas
     ctx.drawImage(avatarImage, sx, sy, sWidth, sHeight, 0, 0, canvasWidth, canvasHeight);
 
-    // 4. Draw jail bars template overlay ON TOP over (0, 0) resized to 400x400
+    // 4. Draw jail bars template overlay ON TOP at natural size
     ctx.drawImage(jailOverlay, 0, 0, canvasWidth, canvasHeight);
 
     // Encode lossless PNG buffer

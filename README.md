@@ -39,13 +39,15 @@ Key behaviors:
 - IP Checker: `GET/POST /tools/ipcheck?ip=` endpoint plus a lookup card on the docs overview.
 - Disabling an endpoint (`PATCH /api/admin/endpoints`) makes it answer `404` immediately, no restart.
 - Maintenance mode (`PUT /api/admin/settings { maintenance: true }`) pauses the public API with `503`; admin, `/api/health`, and the site stay up.
+- Dashboard leaderboard (`PUT /api/admin/settings { leaderboardEnabled: false }`) hides the docs “Most requested” section; `POST /api/admin/leaderboard/reset` clears its persistent counters.
 - Logs stream over SSE (`GET /api/admin/logs/stream?token=…`).
 
 ## Database (Neon or instant fake)
 
-Aqua stores admin state (maintenance flag, disabled endpoints) and
-notifications in a database with one interface and two adapters
-(`packages/aqua/src/db/`, same `pg`-Pool logic as Persian-Bot's neondb):
+Aqua stores admin state (maintenance flag, dashboard leaderboard flag,
+disabled endpoints) and notifications in a database with one interface and
+two adapters (`packages/aqua/src/db/`, same `pg`-Pool logic as Persian-Bot's
+neondb):
 
 - **Fake (default):** memory backed by `packages/aqua/src/json/fakedb.json`.
   Zero setup — the server boots instantly with no credentials. A welcome

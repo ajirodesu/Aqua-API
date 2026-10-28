@@ -190,6 +190,10 @@ export function createNeonDb(): AquaDb {
       );
       return res.rows.map((r) => ({ path: r.path, count: Number(r.hits) }));
     },
+    async resetEndpointHits(): Promise<void> {
+      await ready;
+      await pool.query('DELETE FROM aqua_endpoint_hits');
+    },
     async ping(): Promise<{ ok: boolean; latencyMs: number }> {
       const start = Date.now();
       try {

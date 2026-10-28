@@ -28,6 +28,17 @@ const THEME_COLOR: Record<AppTheme, string> = {
   amethyst: '#0E1116',
 };
 
+/**
+ * Theme-tinted brand marks. Each favicon is the same window glyph rendered in
+ * the theme's primary color. Keep this map in sync with the inline pre-paint
+ * resolver in index.html so the first tab icon already matches the theme.
+ */
+export const THEME_ICON: Record<AppTheme, string> = {
+  emerald: '/icon-emerald.png',
+  jasper: '/icon-jasper.png',
+  amethyst: '/icon-amethyst.png',
+};
+
 function isAppTheme(value: string | null): value is AppTheme {
   return value === 'emerald' || value === 'jasper' || value === 'amethyst';
 }
@@ -65,6 +76,9 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
     const meta = document.querySelector('meta[name="theme-color"]');
     if (meta) meta.setAttribute('content', THEME_COLOR[theme]);
+
+    const icon = document.querySelector('link[rel="icon"]');
+    if (icon) icon.setAttribute('href', THEME_ICON[theme]);
   }, [theme]);
 
   // Scrollbars sit faint at rest and go solid while scrolling — capture phase

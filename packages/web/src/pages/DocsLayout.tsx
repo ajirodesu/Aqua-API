@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, Outlet, useLocation } from 'react-router-dom';
 import { Github, Send } from 'lucide-react';
 import { Sidebar } from '../components/Sidebar';
+import { BrandIcon } from '../components/BrandIcon';
 import { TopBar } from '../components/TopBar';
 import { PageLoader } from '../components/PageLoader';
 import { useAppData, slugify } from '../lib/appData';
@@ -136,7 +137,7 @@ export function DocsLayout() {
               <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-[1.6fr_1fr_1fr]">
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
-                    <img src="/icon.png" alt="" className="h-4 w-4 rounded-[2px] object-contain opacity-80" />
+                    <BrandIcon className="h-4 w-4 rounded-[2px] object-contain opacity-80" />
                     <span className={cn(H_BRAND_TEXT, 'text-on-surface')}>AQUA</span>
                   </div>
                   <p className="mt-3 max-w-xs text-body-sm text-on-surface-variant">
@@ -169,11 +170,6 @@ export function DocsLayout() {
                         </li>
                       );
                     })}
-                    <li>
-                      <Link to="/admin" className="transition-colors hover:text-on-surface">
-                        Admin console
-                      </Link>
-                    </li>
                   </ul>
                 </div>
 

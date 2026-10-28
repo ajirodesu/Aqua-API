@@ -9,6 +9,7 @@ import {
   Settings2,
 } from 'lucide-react';
 import { useAppData, slugify } from '../lib/appData';
+import { BrandIcon } from './BrandIcon';
 import { cn } from '../lib/cn';
 import {
   H_BRAND_TEXT,
@@ -70,7 +71,7 @@ export function Sidebar({ onNavigate, collapsed = false, onToggleCollapsed }: Si
             aria-label="Documentation home"
             className="flex items-center text-primary transition-opacity duration-fast hover:opacity-80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
           >
-            <img src="/icon.png" alt="" className="h-5 w-5 rounded-[2px] object-contain" />
+            <BrandIcon className="h-5 w-5 rounded-[2px] object-contain" />
           </Link>
         </div>
 
@@ -173,7 +174,7 @@ export function Sidebar({ onNavigate, collapsed = false, onToggleCollapsed }: Si
           aria-label="Documentation home"
           className="flex w-full min-w-0 items-center gap-2.5 text-on-surface transition-opacity duration-fast hover:opacity-80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
         >
-          <img src="/icon.png" alt="" className="h-5 w-5 shrink-0 rounded-[2px] object-contain" />
+          <BrandIcon className="h-5 w-5 shrink-0 rounded-[2px] object-contain" />
           <span className={cn(H_BRAND_TEXT, 'truncate')}>AQUA</span>
           <span className={cn(H_SHELL_SCOPE, 'ml-auto pr-1')}>/ DOCS</span>
         </Link>

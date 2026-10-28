@@ -167,8 +167,10 @@ POST bodies are `application/x-www-form-urlencoded`. Try them all in `/docs`.
 
 | Endpoint | Params |
 |---|---|
+| `/canvas/ad` | `image` |
 | `/canvas/affect` | `image` |
 | `/canvas/batslapt` | `image1`, `image2` |
+| `/canvas/bed` | `image1`, `image2` |
 | `/canvas/bonk` | `avatar1`, `avatar2` |
 | `/canvas/brush` | `image` |
 | `/canvas/delete` | `image` |
@@ -281,8 +283,10 @@ relative times; **Clear all** (with confirmation dialog).
 
 Site profile (name, status line, description, Telegram/GitHub/Messenger) — live
 immediately. **Maintenance mode** switch pauses the public API with `503` while
-admin, `/api/health` and the site stay up. Read-only **API keys** inventory shows
-which env keys are configured (previews only, never values).
+admin, `/api/health` and the site stay up. **Dashboard leaderboard** controls
+the docs “Most requested” section and includes a confirmation-guarded
+**Reset counters** action. Read-only **API keys** inventory shows which env
+keys are configured (previews only, never values).
 
 ![Admin settings](docs/screenshots/admin-settings.png)
 

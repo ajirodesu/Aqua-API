@@ -134,6 +134,10 @@ export function createFakeDb(file?: string): AquaDb {
         .sort((a, b) => b.count - a.count || (a.path < b.path ? -1 : 1))
         .slice(0, safeLimit);
     },
+    async resetEndpointHits(): Promise<void> {
+      dump.hits = {};
+      persist();
+    },
     async ping(): Promise<{ ok: boolean; latencyMs: number }> {
       return { ok: true, latencyMs: 0 };
     },

@@ -23,6 +23,7 @@ import {
   X,
 } from 'lucide-react';
 import { useAdminAuth } from '../../contexts/AdminAuthContext';
+import { BrandIcon } from '../../components/BrandIcon';
 import { cn } from '../../lib/cn';
 import {
   H_AVATAR,
@@ -164,7 +165,7 @@ function SidebarNav({
             !collapsed && 'w-full'
           )}
         >
-          <img src="/icon.png" alt="" className="h-5 w-5 shrink-0 rounded-[2px] object-contain" />
+          <BrandIcon className="h-5 w-5 shrink-0 rounded-[2px] object-contain" />
           {!collapsed && (
             <>
               <span className={cn(H_BRAND_TEXT, 'truncate')}>AQUA</span>

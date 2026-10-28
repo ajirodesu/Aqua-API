@@ -38,9 +38,9 @@ export async function initialize({ req, res }: EndpointCtx) {
   }
 
   try {
-    const bgUrl = 'https://i.postimg.cc/q7bQCZrq/batslap.png';
-    const canvasWidth = 1000;
-    const canvasHeight = 500;
+    const bgUrl = 'https://i.postimg.cc/ZRZdBGCD/batslap.jpg';
+    const canvasWidth = 1280;
+    const canvasHeight = 640;
 
     // Fetch background image and both avatar images concurrently
     const [bgImage, avatar1, avatar2] = await Promise.all([
@@ -49,7 +49,7 @@ export async function initialize({ req, res }: EndpointCtx) {
       loadRemoteImage(image2, 'image2'),
     ]);
 
-    // Create canvas matching exact resized dimensions (1000x500)
+    // Create canvas matching the template's native dimensions (1280x640)
     const canvas = createCanvas(canvasWidth, canvasHeight);
     const ctx = canvas.getContext('2d');
 
@@ -96,11 +96,12 @@ export async function initialize({ req, res }: EndpointCtx) {
       ctx.restore();
     };
 
-    // 2. Draw circular image2 (Robin / slapped) AFTER background at (580, 260) with size 200x200
-    drawCircularAvatar(avatar2, 580, 260, 200);
+    // 2. Draw circular image2 (Robin / slapped) AFTER background. The new
+    //    1280x640 template puts the back of Robin's head at the lower right.
+    drawCircularAvatar(avatar2, 720, 315, 320);
 
-    // 3. Draw circular image1 (Batman / slapper) AFTER background at (350, 70) with size 220x220
-    drawCircularAvatar(avatar1, 350, 70, 220);
+    // 3. Draw circular image1 (Batman / slapper) AFTER background over his face.
+    drawCircularAvatar(avatar1, 450, 85, 240);
 
     // Encode lossless PNG buffer
     const bufferArr = await canvas.encode('png');

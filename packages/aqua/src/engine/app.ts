@@ -289,6 +289,11 @@ app.get('/api/endpoints', (_req, res) => {
 });
 
 app.get('/api/top-endpoints', async (req, res) => {
+  // Admin can hide this public leaderboard; when off, no counters are read.
+  if (!adminStore.state.leaderboardEnabled) {
+    return res.json({ status: true, enabled: false, top: [] });
+  }
+
   // Most-called routes from the persistent DB counters — powers the docs
   // "Top 5" section. Disabled endpoints are excluded like everywhere else.
   const raw = Array.isArray(req.query.limit) ? req.query.limit[0] : req.query.limit;
@@ -297,13 +302,14 @@ app.get('/api/top-endpoints', async (req, res) => {
   const top = rows
     .filter((h) => !adminStore.isEndpointDisabled(h.path))
     .slice(0, limit);
-  res.json({ status: true, top });
+  res.json({ status: true, enabled: true, top });
 });
 
 app.get('/api/config', async (_req, res) => {
   res.json({
     status: true,
     ...config,
+    leaderboardEnabled: adminStore.state.leaderboardEnabled,
     notification: await db.listNotifications(),
   });
 });

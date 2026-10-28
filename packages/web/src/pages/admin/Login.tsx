@@ -11,6 +11,7 @@ import { Eye, EyeOff, Lock, UserPlus } from 'lucide-react';
 import { useAdminAuth } from '../../contexts/AdminAuthContext';
 import { adminRequest, AdminApiError } from '../../lib/adminApi';
 import { Alert } from '../../components/AdminUI';
+import { BrandIcon } from '../../components/BrandIcon';
 import { cn } from '../../lib/cn';
 import { H_BRAND_TEXT, H_HEIGHT, H_SHELL_SCOPE } from '../../lib/shell';
 
@@ -171,7 +172,7 @@ export function AdminLogin() {
               aria-label="Aqua API home"
               className="flex items-center gap-2 text-primary transition-opacity duration-fast hover:opacity-80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
             >
-              <img src="/icon.png" alt="" className="h-5 w-5 rounded-[2px] object-contain" />
+              <BrandIcon className="h-5 w-5 rounded-[2px] object-contain" />
               <span className={cn(H_BRAND_TEXT, 'text-on-surface')}>AQUA</span>
             </Link>
             <span aria-hidden="true" className="h-3 w-px shrink-0 bg-hairline" />

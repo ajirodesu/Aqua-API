@@ -4,7 +4,7 @@ import type { ApiHandler, ApiMeta, EndpointCtx } from '@/engine/types.js';
 
 export const meta: ApiMeta = {
   name: 'Wanted Poster',
-  desc: 'Generate a vintage Wanted poster meme with an image avatar and bounty price',
+  desc: 'Generate a One Piece-style Wanted poster meme with a custom image in the portrait frame',
   method: ['get', 'post'],
   category: 'canvas',
   params: [
@@ -18,25 +18,6 @@ export const meta: ApiMeta = {
   ],
 };
 
-/**
- * Auto-fits text font size to ensure it does not exceed max target width
- */
-function getFitFontSize(
-  ctx: any,
-  text: string,
-  startFontSize: number,
-  maxWidth: number,
-  fontFamily: string
-): string {
-  let fontSize = startFontSize;
-  ctx.font = `${fontSize}px ${fontFamily}`;
-  while (ctx.measureText(text).width > maxWidth && fontSize > 5) {
-    fontSize -= 1;
-    ctx.font = `${fontSize}px ${fontFamily}`;
-  }
-  return ctx.font;
-}
-
 export async function initialize({ req, res }: EndpointCtx) {
   const image: string | undefined =
     req.method === 'POST' ? req.body?.image : (req.query?.image as string);
@@ -46,9 +27,9 @@ export async function initialize({ req, res }: EndpointCtx) {
   }
 
   try {
-    const bgUrl = 'https://i.postimg.cc/G3kYWSf4/wanted.png';
-    const canvasWidth = 257;
-    const canvasHeight = 383;
+    const bgUrl = 'https://i.postimg.cc/7ZZGk3j2/wanted.png';
+    const canvasWidth = 447;
+    const canvasHeight = 800;
 
     // Fetch background poster template and user avatar in parallel
     const [bgImage, avatarImage] = await Promise.all([
@@ -63,11 +44,13 @@ export async function initialize({ req, res }: EndpointCtx) {
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'high';
 
-    // 1. Draw avatar FIRST (underneath the frame) at (25, 60) with dimensions 210x210
-    const targetX = 25;
-    const targetY = 60;
-    const targetW = 210;
-    const targetH = 210;
+    // 1. Draw the avatar FIRST so the poster frame overlays its edges. The
+    //    template has a transparent portrait window at (115, 214), 221x220;
+    //    drawing a few pixels past it tucks the image under the frame.
+    const targetX = 112;
+    const targetY = 211;
+    const targetW = 227;
+    const targetH = 226;
 
     // Center-crop aspect ratio fit (cover mode)
     const imgWidth = avatarImage.width;
@@ -90,19 +73,9 @@ export async function initialize({ req, res }: EndpointCtx) {
 
     ctx.drawImage(avatarImage, sx, sy, sWidth, sHeight, targetX, targetY, targetW, targetH);
 
-    // 2. Draw wanted poster background ON TOP of the avatar
+    // 2. Draw wanted poster background ON TOP of the avatar. The template
+    //    already includes its own printed bounty, so no text is overlaid.
     ctx.drawImage(bgImage, 0, 0, canvasWidth, canvasHeight);
-
-    // 3. Generate random bounty reward string
-    const price = Math.floor(Math.random() * 188708) + 329889;
-    const currency = Math.floor(Math.random() * 18);
-    const bountyText = `$${price.toLocaleString()}${currency}`;
-
-    // 4. Measure & render dynamic bounty text centered at (128, 315)
-    ctx.textAlign = 'center';
-    ctx.fillStyle = '#513d34';
-    ctx.font = getFitFontSize(ctx, bountyText, 80, 200, 'Times New Roman, serif');
-    ctx.fillText(bountyText, 128, 315);
 
     // Encode lossless PNG buffer
     const bufferArr = await canvas.encode('png');

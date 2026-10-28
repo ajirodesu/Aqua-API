@@ -97,6 +97,7 @@ export interface AdminSettings {
   messenger: string;
   operator: string;
   maintenance: boolean;
+  leaderboardEnabled: boolean;
   keys: Record<string, { set: boolean; preview: string }>;
 }
 

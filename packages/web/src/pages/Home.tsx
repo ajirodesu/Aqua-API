@@ -18,6 +18,7 @@ import {
   Zap,
 } from 'lucide-react';
 import { useAppData, slugify } from '../lib/appData';
+import { BrandIcon } from '../components/BrandIcon';
 import { NotificationBell } from '../components/NotificationBell';
 import { GifFrame } from '../components/GifFrame';
 import { PageLoader } from '../components/PageLoader';
@@ -137,7 +138,7 @@ export function Home() {
             aria-label={`${name} home`}
             className="flex shrink-0 items-center text-primary transition-opacity duration-fast hover:opacity-80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
           >
-            <img src="/icon.png" alt="" className="h-5 w-5 rounded-[2px] object-contain" />
+            <BrandIcon className="h-5 w-5 rounded-[2px] object-contain" />
           </Link>
 
           <Link
@@ -476,7 +477,7 @@ export function Home() {
           <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-[1.6fr_1fr_1fr]">
             <div>
               <div className="flex items-center gap-2">
-                <img src="/icon.png" alt="" className="h-4 w-4 rounded-[2px] object-contain opacity-80" />
+                <BrandIcon className="h-4 w-4 rounded-[2px] object-contain opacity-80" />
                 <span className={cn(H_BRAND_TEXT, 'text-on-surface')}>AQUA</span>
               </div>
               <p className="mt-3 max-w-xs text-body-sm text-on-surface-variant">

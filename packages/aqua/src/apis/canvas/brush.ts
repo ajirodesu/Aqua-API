@@ -1,6 +1,6 @@
-import { createCanvas, loadImage } from '@napi-rs/canvas';
+import { createCanvas } from '@napi-rs/canvas';
 import { loadRemoteImage, loadTemplateImage, errorStatus } from '@/engine/image-loader.js';
-import type { ApiHandler, ApiMeta, EndpointCtx } from '@/engine/types.js';
+import type { ApiMeta, EndpointCtx } from '@/engine/types.js';
 
 export const meta: ApiMeta = {
   name: 'Brush',
@@ -27,15 +27,15 @@ export async function initialize({ req, res }: EndpointCtx) {
   }
 
   try {
-    const bgUrl = 'https://i.postimg.cc/kg7yYdXd/bobross.png';
+    const bgUrl = 'https://i.postimg.cc/g22XWV13/brush.png';
 
-    // Fetch both Bob Ross template frame and user overlay image in parallel
+    // Fetch the Bob Ross template and the user's photo in parallel
     const [bobRossBg, overlayImage] = await Promise.all([
       loadTemplateImage(bgUrl, 'template'),
       loadRemoteImage(image, 'image'),
     ]);
 
-    // Create canvas based on the background image dimensions
+    // Use the template's native resolution
     const canvas = createCanvas(bobRossBg.width, bobRossBg.height);
     const ctx = canvas.getContext('2d');
 
@@ -43,17 +43,20 @@ export async function initialize({ req, res }: EndpointCtx) {
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'high';
 
-    // Target position and size on Bob Ross's easel
-    const targetX = 15;
-    const targetY = 20;
-    const targetW = 440;
-    const targetH = 440;
+    // The easel canvas is a transparent window at (12, 69), 311x328. A few
+    // pixels of bleed tuck the photo under the easel frame and Bob Ross's
+    // brush, which overlays its right edge.
+    const targetX = 7;
+    const targetY = 63;
+    const targetW = 333;
+    const targetH = 339;
 
-    // 1. Fill canvas area with white background to prevent gaps
+    // 1. Fill the canvas area with white so transparent photos still read as
+    //    a blank canvas rather than holes in the final PNG.
     ctx.fillStyle = '#FFFFFF';
     ctx.fillRect(targetX, targetY, targetW, targetH);
 
-    // 2. Calculate aspect-ratio cropping (cover mode) so photos fit cleanly without distortion
+    // 2. Center-crop aspect ratio fit (cover mode) — never stretch the photo.
     const imgWidth = overlayImage.width;
     const imgHeight = overlayImage.height;
     const targetRatio = targetW / targetH;
@@ -65,19 +68,17 @@ export async function initialize({ req, res }: EndpointCtx) {
     let sHeight = imgHeight;
 
     if (imgRatio > targetRatio) {
-      // Image is wider than target box -> crop horizontally
       sWidth = imgHeight * targetRatio;
       sx = (imgWidth - sWidth) / 2;
     } else {
-      // Image is taller than target box -> crop vertically
       sHeight = imgWidth / targetRatio;
       sy = (imgHeight - sHeight) / 2;
     }
 
-    // 3. Draw user image with cover crop alignment
+    // 3. Draw the photo into the easel canvas.
     ctx.drawImage(overlayImage, sx, sy, sWidth, sHeight, targetX, targetY, targetW, targetH);
 
-    // 4. Draw Bob Ross cutout template on top
+    // 4. Draw the Bob Ross template on top, preserving the easel and character.
     ctx.drawImage(bobRossBg, 0, 0);
 
     // Encode lossless PNG buffer
@@ -88,4 +89,4 @@ export async function initialize({ req, res }: EndpointCtx) {
   } catch (error) {
     return res.status(errorStatus(error)).json({ error: (error as Error).message || 'Internal server error' });
   }
-};
+}

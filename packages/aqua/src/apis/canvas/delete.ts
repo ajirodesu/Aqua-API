@@ -4,7 +4,7 @@ import type { ApiHandler, ApiMeta, EndpointCtx } from '@/engine/types.js';
 
 export const meta: ApiMeta = {
   name: 'Erase',
-  desc: 'Generate a delete/erase meme overlay with a given image',
+  desc: 'Generate a "permanently delete this trash" dialog with a custom image as the file preview',
   method: ['get', 'post'],
   category: 'canvas',
   params: [
@@ -27,7 +27,7 @@ export async function initialize({ req, res }: EndpointCtx) {
   }
 
   try {
-    const bgUrl = 'https://i.postimg.cc/RZGLjbNC/delete.png';
+    const bgUrl = 'https://i.postimg.cc/P55pjW04/erase.png';
 
     // Fetch background template and user avatar concurrently
     const [bgImage, avatarImage] = await Promise.all([
@@ -43,11 +43,13 @@ export async function initialize({ req, res }: EndpointCtx) {
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'high';
 
-    // Target overlay size and position inside the delete dialog box
-    const targetX = 120;
-    const targetY = 135;
-    const targetW = 195;
-    const targetH = 195;
+    // 1. Draw the avatar FIRST. The template's document window is transparent
+    //    at (149, 218), 178x231; drawing a few pixels past it tucks the image
+    //    under the white border while the folded corner and red X stay on top.
+    const targetX = 146;
+    const targetY = 215;
+    const targetW = 184;
+    const targetH = 237;
 
     // Calculate aspect-ratio cropping (cover mode) so photos fit cleanly without distortion
     const imgWidth = avatarImage.width;
@@ -68,11 +70,11 @@ export async function initialize({ req, res }: EndpointCtx) {
       sy = (imgHeight - sHeight) / 2;
     }
 
-    // 1. Draw delete background template FIRST
-    ctx.drawImage(bgImage, 0, 0, bgImage.width, bgImage.height);
-
-    // 2. Draw user avatar AFTER (on top of the background)
     ctx.drawImage(avatarImage, sx, sy, sWidth, sHeight, targetX, targetY, targetW, targetH);
+
+    // 2. Draw the dialog template ON TOP, revealing the avatar through the
+    //    document window and preserving every other template pixel.
+    ctx.drawImage(bgImage, 0, 0, bgImage.width, bgImage.height);
 
     // Encode lossless PNG buffer
     const bufferArr = await canvas.encode('png');

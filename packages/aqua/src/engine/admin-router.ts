@@ -336,6 +336,7 @@ function settingsPayload(config: AquaConfig) {
     messenger: config.messenger ?? '',
     operator: config.operator,
     maintenance: adminStore.state.maintenance,
+    leaderboardEnabled: adminStore.state.leaderboardEnabled,
     keys: {
       API_KEY: masked(env.API_KEY ?? (typeof config.key === 'string' ? config.key : undefined)),
       LUMENFALL_API: masked(env.LUMENFALL_API),
@@ -364,13 +365,15 @@ adminRouter.get('/settings', (req: Request, res: Response) => {
 adminRouter.put('/settings', async (req: Request, res: Response) => {
   const body = (req.body ?? {}) as Record<string, unknown>;
 
-  if ('maintenance' in body) {
-    if (typeof body.maintenance !== 'boolean') {
-      res.status(400).json({ error: 'Invalid maintenance flag' });
-      return;
-    }
-    adminStore.state.maintenance = body.maintenance;
-    await adminStore.saveState();
+  // Validate every field before mutating anything, so a bad value can never
+  // leave the public switches partially updated.
+  if ('maintenance' in body && typeof body.maintenance !== 'boolean') {
+    res.status(400).json({ error: 'Invalid maintenance flag' });
+    return;
+  }
+  if ('leaderboardEnabled' in body && typeof body.leaderboardEnabled !== 'boolean') {
+    res.status(400).json({ error: 'Invalid leaderboard flag' });
+    return;
   }
 
   // Hero GIF: empty string clears it; otherwise require a direct http(s) URL.
@@ -391,6 +394,17 @@ adminRouter.put('/settings', async (req: Request, res: Response) => {
     }
   }
 
+  let adminStateChanged = false;
+  if ('maintenance' in body) {
+    adminStore.state.maintenance = body.maintenance as boolean;
+    adminStateChanged = true;
+  }
+  if ('leaderboardEnabled' in body) {
+    adminStore.state.leaderboardEnabled = body.leaderboardEnabled as boolean;
+    adminStateChanged = true;
+  }
+  if (adminStateChanged) await adminStore.saveState();
+
   const updated = updateSiteConfig({
     name: asString(body['name']),
     description: asString(body['description']),
@@ -401,4 +415,13 @@ adminRouter.put('/settings', async (req: Request, res: Response) => {
     gifUrl: typeof gifUrl === 'string' ? gifUrl : undefined,
   });
   res.json(settingsPayload(updated));
+});
+
+// --- leaderboard ---------------------------------------------------------------
+
+adminRouter.post('/leaderboard/reset', async (req: Request, res: Response) => {
+  void req;
+  const db = await getDb();
+  await db.resetEndpointHits();
+  res.json({ success: true, enabled: adminStore.state.leaderboardEnabled, top: [] });
 });

@@ -6,20 +6,42 @@
     <meta name="theme-color" content="#0F1112" />
     <title>Aqua APIs — Simple and easy to use</title>
     <meta name="description" content="Aqua APIs: a fast, friendly REST API playground and documentation." />
-    <link rel="icon" type="image/png" href="/icon.png" />
+    <link rel="icon" type="image/png" sizes="any" href="/icon-emerald.png" />
     <script>
-      try {
-        var t = localStorage.getItem('aqua-ui-theme');
-        var legacy = { aqua: 'emerald', burnt: 'jasper', indigo: 'amethyst' };
-        if (legacy[t]) t = legacy[t];
-        if (t === 'emerald' || t === 'jasper' || t === 'amethyst') {
-          document.documentElement.setAttribute('data-theme', t);
-        } else {
-          document.documentElement.setAttribute('data-theme', 'emerald');
+      // Resolve the theme before paint, then match the favicon and browser
+      // chrome to it. Keep this map in sync with THEME_ICON in theme.tsx.
+      (function () {
+        var theme = 'emerald';
+        try {
+          var stored = localStorage.getItem('aqua-ui-theme');
+          var legacy = { aqua: 'emerald', burnt: 'jasper', indigo: 'amethyst' };
+          if (legacy[stored]) stored = legacy[stored];
+          if (stored === 'emerald' || stored === 'jasper' || stored === 'amethyst') {
+            theme = stored;
+          }
+        } catch (e) {
+          /* Storage unavailable — keep the default theme. */
         }
-      } catch (e) {
-        document.documentElement.setAttribute('data-theme', 'emerald');
-      }
+
+        document.documentElement.setAttribute('data-theme', theme);
+
+        var icons = {
+          emerald: '/icon-emerald.png',
+          jasper: '/icon-jasper.png',
+          amethyst: '/icon-amethyst.png',
+        };
+        var colors = {
+          emerald: '#0F1112',
+          jasper: '#110E0C',
+          amethyst: '#0E1116',
+        };
+
+        var icon = document.querySelector('link[rel="icon"]');
+        if (icon) icon.setAttribute('href', icons[theme]);
+
+        var chrome = document.querySelector('meta[name="theme-color"]');
+        if (chrome) chrome.setAttribute('content', colors[theme]);
+      })();
     </script>
   </head>
   <body class="bg-surface text-on-surface antialiased">

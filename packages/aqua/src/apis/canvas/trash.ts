@@ -27,7 +27,7 @@ export async function initialize({ req, res }: EndpointCtx) {
   }
 
   try {
-    const bgUrl = 'https://i.postimg.cc/VvBCXdtq/trash.png';
+    const bgUrl = 'https://i.postimg.cc/FRPv4SSM/trash.png';
 
     // Fetch both background frame and user overlay image in parallel
     const [bgImage, overlayImage] = await Promise.all([
@@ -43,16 +43,24 @@ export async function initialize({ req, res }: EndpointCtx) {
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'high';
 
-    // Target overlay size and position
-    const targetX = 309;
+    // Target overlay window: transparent top-right quadrant of the template
+    const targetX = 399;
     const targetY = 0;
-    const targetW = 309;
-    const targetH = 309;
+    const targetW = 401;
+    const targetH = 400;
+
+    // Bleed the drawn area beyond the window so the blur fade is hidden
+    // under the frame (left/bottom) or clipped at the canvas edge (top/right)
+    const bleed = 20;
+    const drawX = targetX - bleed;
+    const drawY = targetY - bleed;
+    const drawW = targetW + bleed * 2;
+    const drawH = targetH + bleed * 2;
 
     // Calculate aspect-ratio cropping (cover mode) so photos fit cleanly without distortion
     const imgWidth = overlayImage.width;
     const imgHeight = overlayImage.height;
-    const targetRatio = targetW / targetH;
+    const targetRatio = drawW / drawH;
     const imgRatio = imgWidth / imgHeight;
 
     let sx = 0;
@@ -68,14 +76,15 @@ export async function initialize({ req, res }: EndpointCtx) {
       sy = (imgHeight - sHeight) / 2;
     }
 
-    // 1. Draw base trash frame
-    ctx.drawImage(bgImage, 0, 0);
-
-    // 2. Draw user overlay image at (309, 0) with 5px blur (replicating image.blur(5) from Jimp)
+    // 1. Draw the blurred user image first, under the template's window
     ctx.save();
-    ctx.filter = 'blur(5px)';
-    ctx.drawImage(overlayImage, sx, sy, sWidth, sHeight, targetX, targetY, targetW, targetH);
+    ctx.filter = 'blur(6.5px)';
+    ctx.drawImage(overlayImage, sx, sy, sWidth, sHeight, drawX, drawY, drawW, drawH);
     ctx.restore();
+
+    // 2. Draw the trash template on top; its alpha reveals the window and
+    //    preserves the grid borders exactly
+    ctx.drawImage(bgImage, 0, 0);
 
     // Encode lossless PNG buffer
     const bufferArr = await canvas.encode('png');

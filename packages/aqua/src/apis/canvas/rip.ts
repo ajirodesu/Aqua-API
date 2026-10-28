@@ -1,16 +1,16 @@
-import { createCanvas, loadImage } from '@napi-rs/canvas';
+import { createCanvas } from '@napi-rs/canvas';
 import { loadRemoteImage, loadTemplateImage, errorStatus } from '@/engine/image-loader.js';
-import type { ApiHandler, ApiMeta, EndpointCtx } from '@/engine/types.js';
+import type { ApiMeta, EndpointCtx } from '@/engine/types.js';
 
 export const meta: ApiMeta = {
   name: 'RIP Gravestone',
-  desc: 'Generate a Rest In Peace coffin meme with an image avatar on the tombstone',
+  desc: 'Generate a Rest In Peace meme with a custom image on the memorial portrait',
   method: ['get', 'post'],
   category: 'canvas',
   params: [
     {
       name: 'image',
-      desc: 'URL or uploaded image for the coffin target',
+      desc: 'URL or uploaded image to display on the memorial portrait',
       example: 'https://avatars.githubusercontent.com/u/180540408?v=4',
       required: true,
       type: 'image',
@@ -27,30 +27,31 @@ export async function initialize({ req, res }: EndpointCtx) {
   }
 
   try {
-    const bgUrl = 'https://i.postimg.cc/1z2wSxPm/rip.png';
-    const canvasWidth = 720;
-    const canvasHeight = 405;
+    const bgUrl = 'https://i.postimg.cc/4xx7g6jW/rip.png';
 
-    // Fetch background template and user avatar concurrently
+    // Fetch the memorial template and the user's photo in parallel
     const [bgImage, avatarImage] = await Promise.all([
       loadTemplateImage(bgUrl, 'template'),
       loadRemoteImage(image, 'image'),
     ]);
 
-    const canvas = createCanvas(canvasWidth, canvasHeight);
+    // Use the template's native resolution
+    const canvas = createCanvas(bgImage.width, bgImage.height);
     const ctx = canvas.getContext('2d');
 
     // High rendering quality
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'high';
 
-    // Target avatar position and dimensions on the tombstone
-    const targetX = 110;
-    const targetY = 47;
-    const targetW = 85;
-    const targetH = 85;
+    // The memorial board's portrait is a transparent window at (215, 93),
+    // 123x154. A few pixels of bleed tuck the photo under the board's frame,
+    // which is drawn slightly tilted, so the template's edges do the masking.
+    const targetX = 211;
+    const targetY = 89;
+    const targetW = 131;
+    const targetH = 162;
 
-    // Center-crop aspect ratio fit (cover mode)
+    // Center-crop aspect ratio fit (cover mode) — never stretch the photo
     const imgWidth = avatarImage.width;
     const imgHeight = avatarImage.height;
     const targetRatio = targetW / targetH;
@@ -69,11 +70,12 @@ export async function initialize({ req, res }: EndpointCtx) {
       sy = (imgHeight - sHeight) / 2;
     }
 
-    // 1. Draw avatar FIRST (underneath the gravestone template frame)
+    // 1. Draw the photo FIRST (underneath the memorial board's frame)
     ctx.drawImage(avatarImage, sx, sy, sWidth, sHeight, targetX, targetY, targetW, targetH);
 
-    // 2. Draw RIP gravestone template background ON TOP of the avatar
-    ctx.drawImage(bgImage, 0, 0, canvasWidth, canvasHeight);
+    // 2. Draw the RIP template ON TOP, revealing the photo through the
+    //    portrait window while keeping every other template pixel untouched.
+    ctx.drawImage(bgImage, 0, 0);
 
     // Encode lossless PNG buffer
     const bufferArr = await canvas.encode('png');
@@ -83,4 +85,4 @@ export async function initialize({ req, res }: EndpointCtx) {
   } catch (error) {
     return res.status(errorStatus(error)).json({ error: (error as Error).message || 'Internal server error' });
   }
-};
+}

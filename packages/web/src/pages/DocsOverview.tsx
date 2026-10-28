@@ -45,18 +45,30 @@ export function DocsOverview() {
   // Database-backed usage ranking — independent from the catalog load so a
   // counter failure can never break the page (section simply stays quiet).
   const [topEndpoints, setTopEndpoints] = useState<TopEndpoint[] | null>(null);
+  const [leaderboardEnabled, setLeaderboardEnabled] = useState(config?.leaderboardEnabled !== false);
 
   useEffect(() => {
     let cancelled = false;
-    fetchTopEndpoints(5)
-      .then((d) => {
-        if (!cancelled) setTopEndpoints(Array.isArray(d.top) ? d.top : []);
-      })
-      .catch(() => {
-        if (!cancelled) setTopEndpoints([]);
-      });
+
+    const loadLeaderboard = () => {
+      fetchTopEndpoints(5)
+        .then((d) => {
+          if (cancelled) return;
+          setLeaderboardEnabled(d.enabled !== false);
+          setTopEndpoints(Array.isArray(d.top) ? d.top : []);
+        })
+        .catch(() => {
+          if (!cancelled) setTopEndpoints([]);
+        });
+    };
+
+    loadLeaderboard();
+    // Admin settings / reset dispatch this after saving so an already-open
+    // docs tab reflects the change without a full reload.
+    window.addEventListener('aqua:leaderboard-updated', loadLeaderboard);
     return () => {
       cancelled = true;
+      window.removeEventListener('aqua:leaderboard-updated', loadLeaderboard);
     };
   }, []);
 
@@ -83,6 +95,10 @@ export function DocsOverview() {
   const exampleHref = exampleEndpoint
     ? `/docs/${slugify(exampleEndpoint.category)}/${slugify(exampleEndpoint.name)}`
     : '/docs';
+
+  // Keep the printed ledger sequential when the usage section is hidden.
+  const sectionNo = (n: number) =>
+    String(n - (leaderboardEnabled ? 0 : 1)).padStart(2, '0');
 
   const gif = config?.header.imageSrc?.[0];
   const size = config?.header.imageSize;
@@ -204,62 +220,64 @@ export function DocsOverview() {
       </header>
 
       {/* ── 01 / Usage — top endpoints ledger ──────────────────────────── */}
-      <section aria-labelledby="usage-title" className="border-b border-hairline py-8">
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <div className="min-w-0">
-            <div className="rule-label max-w-[14rem]">01 / USAGE</div>
-            <h2 id="usage-title" className="mt-3 font-brand text-headline-lg uppercase text-on-surface">
-              Most requested
-            </h2>
+      {leaderboardEnabled && (
+        <section aria-labelledby="usage-title" className="border-b border-hairline py-8">
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div className="min-w-0">
+              <div className="rule-label max-w-[14rem]">{sectionNo(1)} / USAGE</div>
+              <h2 id="usage-title" className="mt-3 font-brand text-headline-lg uppercase text-on-surface">
+                Most requested
+              </h2>
+            </div>
+            <span className={H_SHELL_SCOPE}>LIVE COUNTER</span>
           </div>
-          <span className={H_SHELL_SCOPE}>LIVE COUNTER</span>
-        </div>
 
-        {topWithMeta === null ? (
-          <p className="mt-5 border-t border-hairline pt-4 font-mono text-[10px] uppercase tracking-[0.1em] text-on-surface-variant">
-            Reading counters…
-          </p>
-        ) : topWithMeta.length === 0 ? (
-          <p className="mt-5 border-t border-hairline pt-4 text-body-sm text-on-surface-variant">
-            No usage recorded yet — the first call will appear here.
-          </p>
-        ) : (
-          <ol className="mt-5 border-t border-hairline">
-            {topWithMeta.map(({ rank, count, meta }) => (
-              <li key={meta.path}>
-                <Link
-                  to={`/docs/${slugify(meta.bucketName)}/${slugify(meta.name)}`}
-                  className="group grid grid-cols-[2rem_auto_minmax(0,1fr)_auto] items-center gap-3 border-b border-hairline py-3 transition-colors duration-fast hover:bg-surface-container-low focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary"
-                >
-                  <span
-                    aria-hidden="true"
-                    className="font-mono text-[10px] tabular-nums tracking-[0.08em] text-on-surface-variant/80"
+          {topWithMeta === null ? (
+            <p className="mt-5 border-t border-hairline pt-4 font-mono text-[10px] uppercase tracking-[0.1em] text-on-surface-variant">
+              Reading counters…
+            </p>
+          ) : topWithMeta.length === 0 ? (
+            <p className="mt-5 border-t border-hairline pt-4 text-body-sm text-on-surface-variant">
+              No usage recorded yet — the first call will appear here.
+            </p>
+          ) : (
+            <ol className="mt-5 border-t border-hairline">
+              {topWithMeta.map(({ rank, count, meta }) => (
+                <li key={meta.path}>
+                  <Link
+                    to={`/docs/${slugify(meta.bucketName)}/${slugify(meta.name)}`}
+                    className="group grid grid-cols-[2rem_auto_minmax(0,1fr)_auto] items-center gap-3 border-b border-hairline py-3 transition-colors duration-fast hover:bg-surface-container-low focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary"
                   >
-                    {String(rank).padStart(2, '0')}
-                  </span>
-                  <MethodBadge method={meta.methods[0]} />
-                  <span className="min-w-0">
-                    <span className="block truncate font-brand text-body-md uppercase tracking-[0.04em] text-on-surface">
-                      {meta.name}
+                    <span
+                      aria-hidden="true"
+                      className="font-mono text-[10px] tabular-nums tracking-[0.08em] text-on-surface-variant/80"
+                    >
+                      {String(rank).padStart(2, '0')}
                     </span>
-                    <span className="block truncate font-mono text-[10px] tracking-[0.02em] text-on-surface-variant/80">
-                      {meta.path.split('?')[0]}
+                    <MethodBadge method={meta.methods[0]} />
+                    <span className="min-w-0">
+                      <span className="block truncate font-brand text-body-md uppercase tracking-[0.04em] text-on-surface">
+                        {meta.name}
+                      </span>
+                      <span className="block truncate font-mono text-[10px] tracking-[0.02em] text-on-surface-variant/80">
+                        {meta.path.split('?')[0]}
+                      </span>
                     </span>
-                  </span>
-                  <span className="shrink-0 font-mono text-[10px] uppercase tracking-[0.06em] text-on-surface-variant">
-                    {count} {count === 1 ? 'call' : 'calls'}
-                  </span>
-                </Link>
-              </li>
-            ))}
-          </ol>
-        )}
-      </section>
+                    <span className="shrink-0 font-mono text-[10px] uppercase tracking-[0.06em] text-on-surface-variant">
+                      {count} {count === 1 ? 'call' : 'calls'}
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ol>
+          )}
+        </section>
+      )}
 
       {/* ── 02 / 03 — base URL + sample route ──────────────────────────── */}
       <section className="grid border-b border-hairline md:grid-cols-2">
         <div className="min-w-0 py-8 md:pr-8 lg:pr-10">
-          <div className="rule-label max-w-[12rem]">02 / BASE URL</div>
+          <div className="rule-label max-w-[12rem]">{sectionNo(2)} / BASE URL</div>
           <h2 className="mt-3 font-brand text-headline-sm uppercase text-on-surface">Root address</h2>
           <p className="mt-2 max-w-[44ch] text-body-sm text-on-surface-variant">
             Every documented path is appended to this origin.
@@ -282,7 +300,7 @@ export function DocsOverview() {
         </div>
 
         <div className="min-w-0 border-t border-hairline py-8 md:border-l md:border-t-0 md:pl-8 lg:pl-10">
-          <div className="rule-label max-w-[12rem]">03 / SAMPLE ROUTE</div>
+          <div className="rule-label max-w-[12rem]">{sectionNo(3)} / SAMPLE ROUTE</div>
           <h2 className="mt-3 font-brand text-headline-sm uppercase text-on-surface">Live example</h2>
 
           {exampleEndpoint ? (
@@ -324,7 +342,7 @@ export function DocsOverview() {
       <section aria-labelledby="ip-title" className="border-b border-hairline py-8">
         <div className="grid gap-8 lg:grid-cols-12 lg:gap-10">
           <div className="min-w-0 lg:col-span-4">
-            <div className="rule-label max-w-[12rem]">04 / NETWORK</div>
+            <div className="rule-label max-w-[12rem]">{sectionNo(4)} / NETWORK</div>
             <h2 id="ip-title" className="mt-3 font-brand text-headline-sm uppercase text-on-surface">
               IP checker
             </h2>
@@ -394,7 +412,7 @@ export function DocsOverview() {
       {/* ── 05 / 06 — payload + status reference ───────────────────────── */}
       <section className="grid border-b border-hairline md:grid-cols-2">
         <div className="min-w-0 py-8 md:pr-8 lg:pr-10">
-          <div className="rule-label max-w-[12rem]">05 / PAYLOAD</div>
+          <div className="rule-label max-w-[12rem]">{sectionNo(5)} / PAYLOAD</div>
           <h2 className="mt-3 font-brand text-headline-sm uppercase text-on-surface">Response format</h2>
           <p className="mt-2 text-body-sm text-on-surface-variant">Included in every JSON response.</p>
 
@@ -413,7 +431,7 @@ export function DocsOverview() {
         </div>
 
         <div className="min-w-0 border-t border-hairline py-8 md:border-l md:border-t-0 md:pl-8 lg:pl-10">
-          <div className="rule-label max-w-[12rem]">06 / STATUS</div>
+          <div className="rule-label max-w-[12rem]">{sectionNo(6)} / STATUS</div>
           <h2 className="mt-3 font-brand text-headline-sm uppercase text-on-surface">Error codes</h2>
           <p className="mt-2 text-body-sm text-on-surface-variant">HTTP status reference.</p>
 
@@ -441,7 +459,7 @@ export function DocsOverview() {
       <section aria-labelledby="categories-title" className="py-8">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div className="min-w-0">
-            <div className="rule-label max-w-[14rem]">07 / CATEGORIES</div>
+            <div className="rule-label max-w-[14rem]">{sectionNo(7)} / CATEGORIES</div>
             <h2 id="categories-title" className="mt-3 font-brand text-headline-lg uppercase text-on-surface">
               Browse by group
             </h2>

@@ -46,6 +46,8 @@ export interface AquaDb {
   recordEndpointHit(path: string): Promise<void>;
   /** Most-called routes, highest first. Powers the docs "Top 5" section. */
   getTopEndpoints(limit: number): Promise<DbEndpointHit[]>;
+  /** Clears every persistent endpoint usage counter (admin leaderboard reset). */
+  resetEndpointHits(): Promise<void>;
   ping(): Promise<{ ok: boolean; latencyMs: number }>;
 }
 

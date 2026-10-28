@@ -1,13 +1,14 @@
 /**
- * Admin settings — site profile, maintenance mode, masked API keys.
- * By AjiroDesu. Key values are never exposed; only presence is shown.
+ * Admin settings — site profile, maintenance mode, dashboard leaderboard,
+ * masked API keys. By AjiroDesu. Key values are never exposed; only presence
+ * is shown.
  */
 
 import { useEffect, useState } from 'react';
-import { Save } from 'lucide-react';
+import { RotateCcw, Save } from 'lucide-react';
 import { adminRequest, AdminApiError } from '../../lib/adminApi';
 import type { AdminSettings } from '../../lib/adminTypes';
-import { Alert, SectionHeader, SuccessNote, Switch } from '../../components/AdminUI';
+import { Alert, Dialog, SectionHeader, SuccessNote, Switch } from '../../components/AdminUI';
 import { GifFrame } from '../../components/GifFrame';
 import { H_SHELL_SCOPE } from '../../lib/shell';
 import { cn } from '../../lib/cn';
@@ -65,6 +66,9 @@ export function AdminSettingsPage() {
   const [github, setGithub] = useState('');
   const [messenger, setMessenger] = useState('');
   const [maintenance, setMaintenance] = useState(false);
+  const [leaderboardEnabled, setLeaderboardEnabled] = useState(true);
+  const [confirmReset, setConfirmReset] = useState(false);
+  const [resetting, setResetting] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -81,6 +85,7 @@ export function AdminSettingsPage() {
         setGithub(s.github);
         setMessenger(s.messenger);
         setMaintenance(s.maintenance);
+        setLeaderboardEnabled(s.leaderboardEnabled);
       } catch (err) {
         if (!cancelled) setError(err instanceof AdminApiError ? err.message : 'Failed to load settings');
       } finally {
@@ -98,16 +103,43 @@ export function AdminSettingsPage() {
     try {
       const s = await adminRequest<AdminSettings>('/api/admin/settings', {
         method: 'PUT',
-        body: { name, description, status, gifUrl, telegram, github, messenger, maintenance },
+        body: {
+          name,
+          description,
+          status,
+          gifUrl,
+          telegram,
+          github,
+          messenger,
+          maintenance,
+          leaderboardEnabled,
+        },
       });
       setSettings(s);
       setNotice('Settings saved — live immediately, no restart needed');
       // Refresh the public shell's cached config (GIF, name, status) without a reload.
       window.dispatchEvent(new Event('aqua:site-config-updated'));
+      // Let an open docs overview re-check the leaderboard's visibility.
+      window.dispatchEvent(new Event('aqua:leaderboard-updated'));
     } catch (err) {
       setError(err instanceof AdminApiError ? err.message : 'Save failed');
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function resetLeaderboard() {
+    setResetting(true);
+    setNotice(null);
+    try {
+      await adminRequest('/api/admin/leaderboard/reset', { method: 'POST' });
+      setConfirmReset(false);
+      setNotice('Leaderboard counters reset — the ranking starts from zero');
+      window.dispatchEvent(new Event('aqua:leaderboard-updated'));
+    } catch (err) {
+      setError(err instanceof AdminApiError ? err.message : 'Reset failed');
+    } finally {
+      setResetting(false);
     }
   }
 
@@ -121,7 +153,7 @@ export function AdminSettingsPage() {
   const header = (
     <SectionHeader
       title="Configuration"
-      hint="Site identity, public links, maintenance mode, and key presence."
+      hint="Site identity, public links, maintenance, leaderboard, and key presence."
       right={
         settings ? (
           <button type="button" onClick={() => void save()} disabled={saving} className="btn-primary !min-h-9 !px-4">
@@ -254,6 +286,51 @@ export function AdminSettingsPage() {
         </div>
       </Panel>
 
+      <Panel title="Dashboard leaderboard" meta="PUBLIC DOCS">
+        <div className="flex flex-wrap items-center gap-4 border-b border-hairline py-4">
+          <div className="min-w-0 flex-1">
+            <p className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.12em]">
+              <span
+                className={cn('h-1.5 w-1.5 rounded-[1px]', leaderboardEnabled ? 'bg-success' : 'bg-on-surface-variant/50')}
+                aria-hidden="true"
+              />
+              <span className={leaderboardEnabled ? 'text-success' : 'text-on-surface-variant'}>
+                {leaderboardEnabled ? 'Visible' : 'Hidden'}
+              </span>
+            </p>
+            <p className="mt-1.5 max-w-xl text-body-sm text-on-surface-variant">
+              Shows the “Most requested” usage ranking on the main dashboard. Turning it off hides
+              the section from the public docs; usage counters keep recording.
+            </p>
+          </div>
+          <Switch
+            checked={leaderboardEnabled}
+            onChange={setLeaderboardEnabled}
+            label="Show API leaderboard on main dashboard"
+          />
+        </div>
+
+        <div className="flex flex-wrap items-center gap-3 py-4">
+          <div className="min-w-0 flex-1">
+            <p className="font-mono text-[10px] uppercase tracking-[0.12em] text-on-surface">
+              Reset leaderboard
+            </p>
+            <p className="mt-1.5 max-w-xl text-body-sm text-on-surface-variant">
+              Clears every endpoint call counter so the ranking starts from zero. This cannot be
+              undone.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setConfirmReset(true)}
+            className="btn-secondary !min-h-9 !px-3"
+          >
+            <RotateCcw className="h-3 w-3" strokeWidth={1.75} />
+            Reset counters
+          </button>
+        </div>
+      </Panel>
+
       <Panel title="API keys" meta="READ ONLY">
         <div className="border-b border-hairline py-3">
           <p className="text-body-sm text-on-surface-variant">
@@ -279,6 +356,34 @@ export function AdminSettingsPage() {
         </ul>
         <div className="py-3" />
       </Panel>
+
+      {confirmReset && (
+        <Dialog
+          title="Reset leaderboard counters"
+          onClose={() => setConfirmReset(false)}
+          body={
+            <p className="text-body-sm text-on-surface-variant">
+              Every recorded endpoint call will be deleted and the public ranking will restart from
+              zero. This cannot be undone.
+            </p>
+          }
+          actions={
+            <>
+              <button type="button" onClick={() => setConfirmReset(false)} className="btn-secondary">
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={resetting}
+                onClick={() => void resetLeaderboard()}
+                className="inline-flex min-h-10 items-center justify-center gap-2 rounded-button bg-error px-4 font-mono text-[11px] uppercase tracking-[0.08em] text-on-error transition-colors duration-fast hover:bg-error/90 disabled:pointer-events-none disabled:opacity-[0.38]"
+              >
+                {resetting ? 'Resetting…' : 'Reset counters'}
+              </button>
+            </>
+          }
+        />
+      )}
     </div>
   );
 }

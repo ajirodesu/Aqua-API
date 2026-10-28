@@ -29,6 +29,8 @@ export interface AquaConfig {
   description: string;
   operator: string;
   icon: string;
+  /** Admin-controlled visibility of the docs "Most requested" leaderboard. */
+  leaderboardEnabled?: boolean;
   telegram?: string;
   messenger?: string;
   github?: string;
